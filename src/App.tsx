@@ -4,7 +4,7 @@ import { WorkflowRunner } from './components/WorkflowRunner';
 import { DesktopRobot } from './components/DesktopRobot';
 import { defaultWorkflows, defaultReminders, mockStats, mockOngoingWorkflows } from './data/mockData';
 import { ActiveWorkflow, WorkflowTemplate, ActiveStep } from './types';
-import { Plus, Bell, Clock, Calendar, CheckSquare, PlayCircle, AlertCircle, CheckCircle, Activity, ShieldCheck, Users, FileText, AlertTriangle, X, Download, Pencil, Trash2, Monitor, Laptop, Smartphone, Info, ExternalLink, Scale, Menu } from 'lucide-react';
+import { Plus, Bell, Clock, Calendar, CheckSquare, PlayCircle, AlertCircle, CheckCircle, Activity, ShieldCheck, Users, FileText, AlertTriangle, X, Download, Pencil, Trash2, Monitor, Laptop, Smartphone, Info, ExternalLink, Scale, Menu, Sparkles } from 'lucide-react';
 import { MevzuatBankasi } from './components/MevzuatBankasi';
 // @ts-ignore
 import mammoth from 'mammoth';
@@ -976,11 +976,14 @@ Konu : [Konu]
                   <span className="font-extrabold text-indigo-900">Mevzuat Bilgi Bankası</span>
                 </button>
                 <button 
-                  onClick={() => { setActiveView('desktop-app'); setActiveWorkflow(null); setIsMobileMenuOpen(false); }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'desktop-app' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                  onClick={() => { openMascotWindow(); setIsMobileMenuOpen(false); }}
+                  className="w-full flex items-center justify-between px-4 py-3.5 rounded-xl font-bold transition-all text-sm bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:brightness-110 active:scale-95"
                 >
-                  <Monitor size={18} className="text-indigo-500" />
-                  <span>Masaüstü Uygulaması</span>
+                  <div className="flex items-center space-x-3 text-left">
+                    <Sparkles size={18} className="text-amber-300 animate-pulse shrink-0" />
+                    <span>Asistan Pet'i Çağır 🤖</span>
+                  </div>
+                  <span className="bg-white/20 text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">AÇ</span>
                 </button>
               </nav>
             </div>
@@ -1029,14 +1032,18 @@ Konu : [Konu]
                 <span>Mevzuat Bilgi Bankası</span>
               </button>
               <button 
-                onClick={() => { setActiveView('desktop-app'); setActiveWorkflow(null); }}
-                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'desktop-app' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                onClick={openMascotWindow}
+                className="w-full flex items-center space-x-3 px-4 py-3.5 rounded-xl font-bold transition-all text-sm bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md hover:shadow-lg hover:brightness-110 active:scale-[0.98] mt-2 text-left"
               >
-                <Monitor size={18} className="text-indigo-500" />
-                <span>Masaüstü Uygulaması</span>
-                {isInstallable && (
-                  <span className="w-2 h-2 bg-indigo-600 rounded-full animate-ping ml-auto"></span>
-                )}
+                <Sparkles size={18} className="animate-pulse text-amber-300 shrink-0" />
+                <span>Asistan Pet'i Çağır 🤖</span>
+                <span className="ml-auto bg-white/20 text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase tracking-wider">AÇ</span>
+              </button>
+              <button 
+                onClick={() => { setActiveView('desktop-app'); setActiveWorkflow(null); }}
+                className="w-full text-center text-[10px] text-slate-400 hover:text-slate-600 font-semibold mt-2.5 transition-colors underline hover:no-underline"
+              >
+                ⚙️ Masaüstü Kurulum & EXE Kılavuzu
               </button>
             </nav>
           </div>

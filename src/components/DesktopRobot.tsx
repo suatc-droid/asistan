@@ -178,17 +178,17 @@ export function DesktopRobot({
         let height = 140;
         
         if (contextMenu) {
-          width = 250;
-          height = 270;
+          width = 280;
+          height = 360;
         } else if (isMinimized) {
-          width = 110;
-          height = 110;
+          width = 120;
+          height = 120;
         } else if (showBubble) {
-          width = 250;
-          height = 270;
+          width = 285;
+          height = 295;
         } else {
-          width = 160;
-          height = 140;
+          width = 180;
+          height = 150;
         }
         
         ipcRenderer.send('resize-mascot-window', { width, height });
@@ -426,13 +426,13 @@ export function DesktopRobot({
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="relative w-[210px] bg-slate-950/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-800 p-2 flex flex-col gap-1 text-white text-xs mb-2.5 z-50"
+                className="relative w-[240px] bg-slate-950/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-800 p-2.5 flex flex-col gap-1.5 text-white text-xs mb-2.5 z-50 animate-fade-in"
                 onContextMenu={(e) => e.preventDefault()}
               >
-                <div className="text-[9px] font-bold text-slate-400 px-2 pb-1.5 border-b border-slate-800 mb-1 flex justify-between items-center">
+                <div className="text-[11px] font-bold text-slate-400 px-2 pb-1.5 border-b border-slate-800 mb-1 flex justify-between items-center">
                   <span>ASİSTAN PET MENÜSÜ 🤖</span>
                   <button onClick={() => setContextMenu(null)} className="hover:text-white transition-colors">
-                    <X size={10} />
+                    <X size={12} />
                   </button>
                 </div>
 
@@ -441,9 +441,9 @@ export function DesktopRobot({
                     showNextTip();
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                  className="w-full text-left px-2 py-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium"
                 >
-                  <HelpCircle size={11} className="text-amber-400" />
+                  <HelpCircle size={13} className="text-amber-400" />
                   <span>Mevzuat İpucu Ver</span>
                 </button>
 
@@ -453,13 +453,13 @@ export function DesktopRobot({
                     setContextMenu(null);
                     handleInteract('happy', !isRoaming ? "Yuppi! Ekranında keşfe çıkıyorum! 🛸✨" : "Gezinmeyi durdurdum, dinleniyorum! 🛋️");
                   }}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-between text-[10px]"
+                  className="w-full text-left px-2 py-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-between text-xs font-medium"
                 >
                   <span className="flex items-center gap-2">
-                    <Sparkles size={11} className="text-purple-400" />
+                    <Sparkles size={13} className="text-purple-400" />
                     <span>Serbest Dolaşım Modu</span>
                   </span>
-                  <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full ${isRoaming ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${isRoaming ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
                     {isRoaming ? "Açık" : "Kapalı"}
                   </span>
                 </button>
@@ -469,9 +469,9 @@ export function DesktopRobot({
                     handleTellJoke();
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                  className="w-full text-left px-2 py-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium"
                 >
-                  <Coffee size={11} className="text-indigo-400" />
+                  <Coffee size={13} className="text-indigo-400" />
                   <span>Beni Eğlendir (Şaka) 🎭</span>
                 </button>
 
@@ -480,9 +480,9 @@ export function DesktopRobot({
                     handleHumTune();
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                  className="w-full text-left px-2 py-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium"
                 >
-                  <Volume2 size={11} className="text-sky-400" />
+                  <Volume2 size={13} className="text-sky-400" />
                   <span>Melodi Mırıldan 🎵</span>
                 </button>
 
@@ -491,9 +491,9 @@ export function DesktopRobot({
                     setSoundEnabled(!soundEnabled);
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                  className="w-full text-left px-2 py-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium"
                 >
-                  {soundEnabled ? <Volume2 size={11} className="text-blue-400" /> : <VolumeX size={11} className="text-slate-400" />}
+                  {soundEnabled ? <Volume2 size={13} className="text-blue-400" /> : <VolumeX size={13} className="text-slate-400" />}
                   <span>Asistan Sesleri: {soundEnabled ? "Açık" : "Kapalı"}</span>
                 </button>
 
@@ -502,17 +502,17 @@ export function DesktopRobot({
                     setIsMinimized(!isMinimized);
                     setContextMenu(null);
                   }}
-                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                  className="w-full text-left px-2 py-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-xs font-medium"
                 >
-                  {isMinimized ? <Maximize2 size={11} className="text-emerald-400" /> : <Minimize2 size={11} className="text-rose-400" />}
+                  {isMinimized ? <Maximize2 size={13} className="text-emerald-400" /> : <Minimize2 size={13} className="text-rose-400" />}
                   <span>{isMinimized ? "Asistanı Büyüt" : "Simge Durumuna Getir"}</span>
                 </button>
 
                 <button
                   onClick={() => window.close()}
-                  className="w-full text-left px-2 py-1.5 hover:bg-red-950 hover:text-red-300 rounded-lg transition-colors flex items-center gap-2 text-[10px] text-red-400 mt-1"
+                  className="w-full text-left px-2 py-2 hover:bg-red-950 hover:text-red-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-semibold text-red-400 mt-1"
                 >
-                  <X size={11} />
+                  <X size={13} />
                   <span>Kapat</span>
                 </button>
 
@@ -529,34 +529,34 @@ export function DesktopRobot({
                 initial={{ opacity: 0, y: 15, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                className="relative w-[210px] bg-white rounded-2xl p-3 shadow-2xl border border-slate-200/80 flex flex-col gap-1.5 text-slate-800 text-xs mb-2.5"
+                className="relative w-[245px] bg-white rounded-2xl p-3.5 shadow-2xl border border-slate-200/90 flex flex-col gap-2 text-slate-800 mb-2.5"
               >
                 {/* Bubble Text */}
-                <p className="text-[10px] font-semibold leading-normal text-slate-700 whitespace-pre-line max-h-20 overflow-y-auto pr-1">
+                <p className="text-xs font-semibold leading-relaxed text-slate-800 whitespace-pre-line max-h-24 overflow-y-auto pr-1">
                   {bubbleText}
                 </p>
 
                 {/* Compact Actions inside speech bubble */}
-                <div className="flex justify-between items-center pt-1.5 border-t border-slate-100 mt-0.5">
-                  <div className="flex gap-1">
+                <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-0.5">
+                  <div className="flex gap-1.5">
                     <button
                       onClick={showNextTip}
-                      className="bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md py-0.5 px-1.5 text-[8px] font-extrabold transition-all border border-amber-100/50"
+                      className="bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md py-1 px-2.5 text-[10px] font-extrabold transition-all border border-amber-100/50"
                     >
                       İpucu 💡
                     </button>
                     <button
                       onClick={() => setSoundEnabled(!soundEnabled)}
-                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md py-0.5 px-1 text-[8px] transition-all border border-slate-200/30 flex items-center justify-center"
+                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md py-1 px-1.5 text-[10px] transition-all border border-slate-200/30 flex items-center justify-center"
                     >
-                      {soundEnabled ? <Volume2 size={10} /> : <VolumeX size={10} />}
+                      {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
                     </button>
                   </div>
                   <button 
                     onClick={() => setShowBubble(false)}
-                    className="text-slate-400 hover:text-slate-600 transition-colors p-0.5"
+                    className="text-slate-400 hover:text-slate-600 transition-colors p-1"
                   >
-                    <X size={10} />
+                    <X size={12} />
                   </button>
                 </div>
 
@@ -726,7 +726,7 @@ export function DesktopRobot({
                   </div>
                 </div>
 
-                <p className="text-xs font-semibold leading-relaxed whitespace-pre-line text-slate-700">
+                <p className="text-sm font-semibold leading-relaxed whitespace-pre-line text-slate-800">
                   {bubbleText}
                 </p>
 
