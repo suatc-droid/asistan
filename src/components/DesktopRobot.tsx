@@ -262,24 +262,9 @@ export function DesktopRobot({
     return (
       <div 
         style={{ WebkitAppRegion: 'drag' } as any}
-        className="flex flex-col items-center justify-center w-full min-h-screen bg-transparent text-slate-800 p-4 relative overflow-hidden select-none"
+        className="flex flex-col items-center justify-end w-full h-screen bg-transparent text-slate-800 pb-4 px-4 relative overflow-hidden select-none"
       >
-        {/* Minimalist title/control bar */}
-        <div className="absolute top-3 left-4 right-4 flex items-center justify-between text-slate-400 z-10 pointer-events-auto">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1">
-            🤖 Asistan Widget
-          </span>
-          <button 
-            onClick={() => window.close()}
-            style={{ WebkitAppRegion: 'no-drag' } as any}
-            className="hover:text-red-500 font-bold text-xs transition-colors p-1"
-            title="Kapat"
-          >
-            <X size={14} />
-          </button>
-        </div>
-
-        <div className="flex flex-col items-center cursor-default pt-6 max-w-full pointer-events-auto">
+        <div className="flex flex-col items-center cursor-default max-w-full pointer-events-auto">
           {/* Speech Bubble */}
           <AnimatePresence>
             {showBubble && !isMinimized && (
@@ -288,51 +273,53 @@ export function DesktopRobot({
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 style={{ WebkitAppRegion: 'no-drag' } as any}
-                className="w-full max-w-[260px] bg-white/95 backdrop-blur-sm rounded-2xl p-4 shadow-2xl border border-slate-100 flex flex-col gap-2 text-slate-800 text-xs mb-4"
+                className="relative w-full max-w-[240px] bg-white rounded-2xl p-3.5 shadow-2xl border border-slate-200/80 flex flex-col gap-1.5 text-slate-800 text-xs mb-3"
               >
-                <div className="flex items-center justify-between border-b border-slate-100 pb-1.5 mb-1">
-                  <span className="text-[10px] font-bold text-blue-600 flex items-center gap-1 uppercase tracking-wider">
-                    <Zap size={11} className="text-amber-500 animate-pulse" />
-                    Asistan Robot
-                  </span>
-                  <button 
-                    onClick={() => setShowBubble(false)}
-                    className="text-slate-400 hover:text-slate-600 transition-colors"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-                <p className="text-[11px] font-medium leading-normal text-slate-700 whitespace-pre-line max-h-36 overflow-y-auto">
+                {/* Bubble Text */}
+                <p className="text-[11px] font-semibold leading-relaxed text-slate-700 whitespace-pre-line max-h-24 overflow-y-auto pr-1">
                   {bubbleText}
                 </p>
-                <div className="flex justify-end gap-1.5 pt-1.5 border-t border-slate-50 mt-1">
-                  <button
-                    onClick={showNextTip}
-                    className="bg-orange-50 hover:bg-orange-100 border border-orange-100 text-orange-700 rounded-lg py-1 px-2 text-[9px] font-bold transition-all"
+
+                {/* Compact Actions inside speech bubble */}
+                <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-1">
+                  <div className="flex gap-1.5">
+                    <button
+                      onClick={showNextTip}
+                      className="bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg py-0.5 px-2 text-[9px] font-bold transition-all border border-amber-100/50"
+                    >
+                      İpucu 💡
+                    </button>
+                    <button
+                      onClick={() => setSoundEnabled(!soundEnabled)}
+                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg py-0.5 px-1.5 text-[9px] transition-all border border-slate-200/30"
+                    >
+                      {soundEnabled ? <Volume2 size={11} /> : <VolumeX size={11} />}
+                    </button>
+                  </div>
+                  <button 
+                    onClick={() => setShowBubble(false)}
+                    className="text-slate-400 hover:text-slate-600 transition-colors p-0.5"
                   >
-                    İpucu Ver 💡
-                  </button>
-                  <button
-                    onClick={() => setSoundEnabled(!soundEnabled)}
-                    className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg py-1 px-1.5 text-[9px] font-bold transition-all"
-                  >
-                    {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                    <X size={11} />
                   </button>
                 </div>
+
+                {/* Speech Bubble Tail */}
+                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-slate-200/80 rotate-45" />
               </motion.div>
             )}
           </AnimatePresence>
 
           {/* Mascot Drawing */}
           <div 
-            className="flex flex-col items-center cursor-pointer"
+            className="flex flex-col items-center cursor-pointer relative"
             style={{ WebkitAppRegion: 'no-drag' } as any}
             onClick={() => {
               if (isMinimized) {
                 setIsMinimized(false);
                 handleInteract('happy', "Geldim! 😊");
               } else {
-                handleInteract('happy', "Yardımcı olabildiğim için mutluyum! Sağ tıklayarak diğer seçeneklerime göz atabilirsin.");
+                handleInteract('happy', "Sana yardımcı olmaktan mutluluk duyarım! Diğer seçeneklerim için üzerime sağ tıklayabilirsin.");
               }
             }}
             onContextMenu={handleContextMenu}
@@ -341,14 +328,14 @@ export function DesktopRobot({
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg relative border border-blue-400"
+                className="bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-full shadow-lg relative border border-blue-400"
               >
-                <Sparkles size={16} className="animate-pulse" />
+                <Sparkles size={18} className="animate-pulse" />
               </motion.div>
             ) : (
-              <div className="relative">
+              <div className="relative p-2 bg-blue-500/5 rounded-full border border-blue-500/10 backdrop-blur-sm shadow-sm hover:scale-105 transition-transform duration-300">
                 <motion.div
-                  animate={{ y: [0, -6, 0] }}
+                  animate={{ y: [0, -4, 0] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
                   className="w-16 h-16"
                 >
@@ -400,10 +387,16 @@ export function DesktopRobot({
               </div>
             )}
           </div>
-        </div>
 
-        <div className="absolute bottom-2 text-[8px] text-slate-400 text-center w-full pointer-events-none">
-          Sürükle & Sağ Tıkla 🖱️
+          {/* Minimal Elegant Grab handle badge */}
+          <div 
+            style={{ WebkitAppRegion: 'drag' } as any}
+            className="mt-2.5 px-3 py-1 bg-blue-600/10 hover:bg-blue-600/20 text-[9px] text-blue-600 rounded-full font-extrabold tracking-wider uppercase cursor-grab active:cursor-grabbing border border-blue-600/20 transition-all select-none flex items-center gap-1 shadow-sm"
+            title="Sürükleyip taşımak için basılı tutun"
+          >
+            <span>✥</span>
+            <span>SÜRÜKLE</span>
+          </div>
         </div>
 
         {/* Context Menu inside Standalone */}

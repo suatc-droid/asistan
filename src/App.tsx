@@ -878,7 +878,7 @@ Konu : [Konu]
 
   if (isMascotOnly) {
     return (
-      <div className="fixed inset-0 w-screen h-screen bg-transparent overflow-hidden flex items-center justify-center">
+      <div className="fixed inset-0 w-full h-full bg-transparent overflow-hidden">
         <DesktopRobot
           setIsAssistantOpen={() => {}}
           openNewTemplateModal={() => {}}
