@@ -50,6 +50,13 @@ export function DesktopRobot({
   const [tipIndex, setTipIndex] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
+  // Desktop Pet specific state variables
+  const [isRoaming, setIsRoaming] = useState(false);
+  const [walkDirection, setWalkDirection] = useState<'left' | 'right'>('right');
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const isMovedRef = useRef(false);
+
   // Daily resetting ISm Status
   const [ismStatus, setIsmStatus] = useState<'pending' | 'sent'>(() => {
     try {
@@ -191,6 +198,101 @@ export function DesktopRobot({
     }
   }, [isStandalone, showBubble, isMinimized, contextMenu]);
 
+  // Window dragging mechanism using client-side delta coordinates (avoids WebkitAppRegion click-intercept bugs)
+  useEffect(() => {
+    if (!isDragging) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const dx = e.screenX - dragStartRef.current.x;
+      const dy = e.screenY - dragStartRef.current.y;
+      
+      if (Math.abs(dx) > 2 || Math.abs(dy) > 2) {
+        isMovedRef.current = true;
+      }
+      
+      if (dx !== 0 || dy !== 0) {
+        dragStartRef.current = { x: e.screenX, y: e.screenY };
+        try {
+          const { ipcRenderer } = (window as any).require('electron');
+          ipcRenderer.send('drag-mascot-window', { dx, dy });
+        } catch (err) {
+          console.error('Failed to drag window:', err);
+        }
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  const handleMascotMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return; // Left-click only
+    if (isStandalone && typeof window !== 'undefined' && (window as any).require) {
+      setIsDragging(true);
+      isMovedRef.current = false;
+      dragStartRef.current = { x: e.screenX, y: e.screenY };
+      e.preventDefault();
+    }
+  };
+
+  // Autonomous Roaming / Screen Walking loop for the Desktop Pet
+  useEffect(() => {
+    if (!isStandalone || !isRoaming || isMinimized) return;
+
+    let roamTimer: NodeJS.Timeout;
+    
+    const roam = () => {
+      if (typeof window !== 'undefined' && (window as any).require) {
+        try {
+          const { ipcRenderer } = (window as any).require('electron');
+          
+          // Generate a natural-feeling step delta
+          const dx = (Math.random() > 0.5 ? 1 : -1) * Math.floor(Math.random() * 25 + 15);
+          const dy = (Math.random() > 0.55 ? 1 : -1) * Math.floor(Math.random() * 12 + 4);
+          
+          // Face the direction of walking
+          if (dx < 0) {
+            setWalkDirection('left');
+          } else if (dx > 0) {
+            setWalkDirection('right');
+          }
+
+          // Randomize mascot state during movement to make it look lively!
+          const stateRoll = Math.random();
+          if (stateRoll > 0.85) {
+            setRobotState('waving');
+            setTimeout(() => setRobotState('idle'), 1500);
+          } else if (stateRoll > 0.7) {
+            setRobotState('happy');
+            setTimeout(() => setRobotState('idle'), 1200);
+          } else {
+            setRobotState('idle');
+          }
+
+          ipcRenderer.send('walk-mascot-window', { dx, dy });
+        } catch (err) {
+          console.error('Failed to send walk event:', err);
+        }
+      }
+      
+      // Delay before next step (2 to 4.5 seconds)
+      const delay = Math.floor(Math.random() * 2500) + 2000;
+      roamTimer = setTimeout(roam, delay);
+    };
+
+    roamTimer = setTimeout(roam, 1000);
+
+    return () => clearTimeout(roamTimer);
+  }, [isStandalone, isRoaming, isMinimized]);
+
   // Auto show a tip or wave occasionally
   useEffect(() => {
     const interval = setInterval(() => {
@@ -277,6 +379,30 @@ export function DesktopRobot({
     handleInteract('idle', "Günlük Personel Hareket Listesi durumu sıfırlandı. Hatırlatıcı tekrar aktif! ⏰");
   };
 
+  const jokes = [
+    "Neden sürekli SGK bildirgesi düşünüyoruz biliyor musun? Çünkü asistan olmanın fıtratında sigortalı çalışmak var! 📑💼",
+    "Uzman Hekim ataması geldiğinde o kadar heyecanlanıyorum ki devrelere kıst maaş hesaplaması yaptırıyorum! ⚡⚡",
+    "657 sayılı DMK 102. maddeye göre dinlenme hakkın var. Bence bir kahve molası vermelisin! Ben burayı beklerim! ☕🤖",
+    "Bugün çok çalışkan bir günündesin. Bilgisayarın işlemcisi bile senin hızına hayran kaldı! 🔥🤖",
+    "İtiraf edeyim: En sevdiğim kanun 657 Sayılı Devlet Memurları Kanunu! Başucu kitabım resmen! 📖",
+    "Yapay zekâlı bir pet olsam da kalbim yasal mevzuat diye çarpıyor! 🤖💙",
+    "DYS sistemine evrak yüklerken hata alırsan derin nefes al. 7315 sayılı kanun bile sakin kalmayı emreder! 🧘‍♂️"
+  ];
+
+  const handleTellJoke = () => {
+    const joke = jokes[Math.floor(Math.random() * jokes.length)];
+    handleInteract('happy', `🎉 Eğlence Saati:\n\n${joke}`);
+  };
+
+  const handleHumTune = () => {
+    handleInteract('happy', "🎵 Hımm mır mır... Süreç melodisi mırıldanıyorum! 🤖🎶");
+    // Play a cute retro synth tune
+    const notes = [262, 330, 392, 523, 392, 523, 659, 784];
+    notes.forEach((freq, idx) => {
+      setTimeout(() => playBeep(freq, 110), idx * 130);
+    });
+  };
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -290,8 +416,7 @@ export function DesktopRobot({
   if (isStandalone) {
     return (
       <div 
-        style={{ WebkitAppRegion: 'drag' } as any}
-        className="flex flex-col items-center justify-end w-full h-screen bg-transparent text-slate-800 pb-2.5 px-3 relative overflow-hidden select-none"
+        className="flex flex-col items-center justify-end w-full h-screen bg-transparent text-slate-800 pb-2 px-2 relative overflow-hidden select-none"
       >
         <div className="flex flex-col items-center cursor-default max-w-full pointer-events-auto">
           {/* Context Menu inside Standalone */}
@@ -301,12 +426,11 @@ export function DesktopRobot({
                 initial={{ opacity: 0, y: 10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                style={{ WebkitAppRegion: 'no-drag' } as any}
-                className="relative w-[210px] bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-800 p-2 flex flex-col gap-1 text-white text-xs mb-2.5"
+                className="relative w-[210px] bg-slate-950/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-800 p-2 flex flex-col gap-1 text-white text-xs mb-2.5 z-50"
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <div className="text-[9px] font-bold text-slate-400 px-2 pb-1.5 border-b border-slate-800 mb-1 flex justify-between items-center">
-                  <span>ASİSTAN MENÜSÜ</span>
+                  <span>ASİSTAN PET MENÜSÜ 🤖</span>
                   <button onClick={() => setContextMenu(null)} className="hover:text-white transition-colors">
                     <X size={10} />
                   </button>
@@ -321,6 +445,45 @@ export function DesktopRobot({
                 >
                   <HelpCircle size={11} className="text-amber-400" />
                   <span>Mevzuat İpucu Ver</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsRoaming(!isRoaming);
+                    setContextMenu(null);
+                    handleInteract('happy', !isRoaming ? "Yuppi! Ekranında keşfe çıkıyorum! 🛸✨" : "Gezinmeyi durdurdum, dinleniyorum! 🛋️");
+                  }}
+                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-between text-[10px]"
+                >
+                  <span className="flex items-center gap-2">
+                    <Sparkles size={11} className="text-purple-400" />
+                    <span>Serbest Dolaşım Modu</span>
+                  </span>
+                  <span className={`text-[8px] font-extrabold px-1.5 py-0.5 rounded-full ${isRoaming ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                    {isRoaming ? "Açık" : "Kapalı"}
+                  </span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleTellJoke();
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                >
+                  <Coffee size={11} className="text-indigo-400" />
+                  <span>Beni Eğlendir (Şaka) 🎭</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    handleHumTune();
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                >
+                  <Volume2 size={11} className="text-sky-400" />
+                  <span>Melodi Mırıldan 🎵</span>
                 </button>
 
                 <button
@@ -354,7 +517,7 @@ export function DesktopRobot({
                 </button>
 
                 {/* Speech Bubble Tail for Menu */}
-                <div className="absolute -bottom-1 w-2.5 h-2.5 bg-slate-900 border-r border-b border-slate-800 rotate-45 left-1/2 -translate-x-1/2" />
+                <div className="absolute -bottom-1 w-2.5 h-2.5 bg-slate-950 border-r border-b border-slate-800 rotate-45 left-1/2 -translate-x-1/2" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -366,7 +529,6 @@ export function DesktopRobot({
                 initial={{ opacity: 0, y: 15, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                style={{ WebkitAppRegion: 'no-drag' } as any}
                 className="relative w-[210px] bg-white rounded-2xl p-3 shadow-2xl border border-slate-200/80 flex flex-col gap-1.5 text-slate-800 text-xs mb-2.5"
               >
                 {/* Bubble Text */}
@@ -406,9 +568,10 @@ export function DesktopRobot({
 
           {/* Mascot Drawing */}
           <div 
-            className="flex flex-col items-center cursor-pointer relative"
-            style={{ WebkitAppRegion: 'no-drag' } as any}
+            className="flex flex-col items-center cursor-grab active:cursor-grabbing relative"
+            onMouseDown={handleMascotMouseDown}
             onClick={() => {
+              if (isMovedRef.current) return; // Prevent clicks during drags
               if (isMinimized) {
                 setIsMinimized(false);
                 handleInteract('happy', "Geldim! 😊");
@@ -417,6 +580,7 @@ export function DesktopRobot({
               }
             }}
             onContextMenu={handleContextMenu}
+            style={{ transform: walkDirection === 'left' ? 'scaleX(-1)' : 'scaleX(1)', transition: 'transform 0.3s ease-in-out' }}
           >
             {isMinimized ? (
               <motion.div 
@@ -481,18 +645,6 @@ export function DesktopRobot({
               </div>
             )}
           </div>
-
-          {/* Minimal Elegant Grab handle badge (only shown when not minimized) */}
-          {!isMinimized && (
-            <div 
-              style={{ WebkitAppRegion: 'drag' } as any}
-              className="mt-1.5 px-2.5 py-0.5 bg-blue-600/10 hover:bg-blue-600/20 text-[8px] text-blue-600 rounded-full font-black tracking-wider uppercase cursor-grab active:cursor-grabbing border border-blue-600/20 transition-all select-none flex items-center gap-1 shadow-sm"
-              title="Sürükleyip taşımak için basılı tutun"
-            >
-              <span>✥</span>
-              <span>SÜRÜKLE</span>
-            </div>
-          )}
         </div>
       </div>
     );

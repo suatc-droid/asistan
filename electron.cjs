@@ -203,3 +203,39 @@ ipcMain.on('resize-mascot-window', (event, { width, height }) => {
     }
   }
 });
+
+ipcMain.on('drag-mascot-window', (event, { dx, dy }) => {
+  if (mascotWindow) {
+    try {
+      const [x, y] = mascotWindow.getPosition();
+      mascotWindow.setPosition(Math.round(x + dx), Math.round(y + dy));
+    } catch (err) {
+      console.error('Failed to drag mascot window:', err);
+    }
+  }
+});
+
+ipcMain.on('walk-mascot-window', (event, { dx, dy }) => {
+  if (mascotWindow) {
+    try {
+      const [x, y] = mascotWindow.getPosition();
+      const bounds = mascotWindow.getBounds();
+      const { screen } = require('electron');
+      const primaryDisplay = screen.getPrimaryDisplay();
+      const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+
+      let newX = x + dx;
+      let newY = y + dy;
+
+      // Bound checking: prevent walking off the screen completely
+      if (newX < 10) newX = 10;
+      if (newX > screenWidth - bounds.width - 10) newX = screenWidth - bounds.width - 10;
+      if (newY < 10) newY = 10;
+      if (newY > screenHeight - bounds.height - 10) newY = screenHeight - bounds.height - 10;
+
+      mascotWindow.setPosition(Math.round(newX), Math.round(newY));
+    } catch (err) {
+      console.error('Failed to walk mascot window:', err);
+    }
+  }
+});
