@@ -1,28 +1,24 @@
 const { app, BrowserWindow, ipcMain, Menu, Tray } = require('electron');
 const path = require('path');
-const { spawn } = require('child_process');
 
 let mainWindow;
 let mascotWindow;
 let tray;
-let expressProcess;
 
 function startExpressServer() {
-  // Spawn the express server in production built mode
-  const serverPath = path.join(__dirname, 'dist', 'server.cjs');
-  
-  // Set production environment
-  const env = { ...process.env, NODE_ENV: 'production', PORT: '3000' };
-  
-  expressProcess = spawn('node', [serverPath], { env });
-  
-  expressProcess.stdout.on('data', (data) => {
-    console.log(`Server stdout: ${data}`);
-  });
-
-  expressProcess.stderr.on('data', (data) => {
-    console.error(`Server stderr: ${data}`);
-  });
+  try {
+    const serverPath = path.join(__dirname, 'dist', 'server.cjs');
+    
+    // Set production environment variables
+    process.env.NODE_ENV = 'production';
+    process.env.PORT = '3000';
+    
+    // Load and run the compiled server directly in the same process
+    require(serverPath);
+    console.log("Express server loaded successfully inside main process!");
+  } catch (error) {
+    console.error("Failed to load express server internally:", error);
+  }
 }
 
 function createMainWindow() {
@@ -123,13 +119,12 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
-    if (expressProcess) expressProcess.kill();
     app.quit();
   }
 });
 
 app.on('will-quit', () => {
-  if (expressProcess) expressProcess.kill();
+  // express server terminates automatically with the main process
 });
 
 // IPC communication channel
