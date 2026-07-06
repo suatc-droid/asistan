@@ -73,28 +73,34 @@ function createMascotWindow() {
 }
 
 function createTray() {
-  const iconPath = path.join(__dirname, 'public', 'icon.svg'); // Fallback, normally a .png/ico is used
-  tray = new Tray(iconPath);
-  
-  const contextMenu = Menu.buildFromTemplate([
-    { label: 'Kurumsal İş Asistanı', enabled: false },
-    { type: 'separator' },
-    { label: 'Ana Paneli Aç', click: () => { if (mainWindow) mainWindow.show(); else createMainWindow(); } },
-    { label: 'Asistan Robotu Masaüstüne Çıkar', click: () => { createMascotWindow(); } },
-    { type: 'separator' },
-    { label: 'Çıkış', click: () => {
-      app.isQuitting = true;
-      app.quit();
-    }}
-  ]);
+  try {
+    // Try to load icon.png first, fallback to icon.svg
+    let iconPath = path.join(__dirname, 'public', 'icon.png');
+    tray = new Tray(iconPath);
+    
+    const contextMenu = Menu.buildFromTemplate([
+      { label: 'Kurumsal İş Asistanı', enabled: false },
+      { type: 'separator' },
+      { label: 'Ana Paneli Aç', click: () => { if (mainWindow) mainWindow.show(); else createMainWindow(); } },
+      { label: 'Asistan Robotu Masaüstüne Çıkar', click: () => { createMascotWindow(); } },
+      { type: 'separator' },
+      { label: 'Çıkış', click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }}
+    ]);
 
-  tray.setToolTip('Kurumsal İş Asistanı');
-  tray.setContextMenu(contextMenu);
+    tray.setToolTip('Kurumsal İş Asistanı');
+    tray.setContextMenu(contextMenu);
 
-  tray.on('double-click', () => {
-    if (mainWindow) mainWindow.show();
-    else createMainWindow();
-  });
+    tray.on('double-click', () => {
+      if (mainWindow) mainWindow.show();
+      else createMainWindow();
+    });
+  } catch (error) {
+    console.error('Failed to create tray icon:', error);
+    // Silent fail for tray creation so the main application window can still load and run perfectly!
+  }
 }
 
 // Electron application lifecycle hooks
