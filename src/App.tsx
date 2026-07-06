@@ -150,6 +150,10 @@ function App() {
     if (isMascotOnly) {
       document.body.style.backgroundColor = 'transparent';
       document.documentElement.style.backgroundColor = 'transparent';
+      const rootEl = document.getElementById('root');
+      if (rootEl) {
+        rootEl.style.backgroundColor = 'transparent';
+      }
     }
   }, []);
   
@@ -189,6 +193,23 @@ function App() {
   };
 
   const openMascotWindow = () => {
+    const isElectron = typeof window !== 'undefined' && (
+      navigator.userAgent.toLowerCase().includes('electron') ||
+      !!(window as any).ipcRenderer ||
+      typeof (window as any).require === 'function'
+    );
+
+    if (isElectron) {
+      try {
+        // Since nodeIntegration: true and contextIsolation: false is enabled in electron.cjs
+        const { ipcRenderer } = (window as any).require('electron');
+        ipcRenderer.send('open-mascot-widget');
+        return;
+      } catch (e) {
+        console.error("Failed to open mascot widget via IPC, falling back to window.open:", e);
+      }
+    }
+
     const width = 280;
     const height = 400;
     const left = window.screen.width - width - 40;

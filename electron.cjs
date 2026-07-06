@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, Tray, dialog } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, dialog, screen } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -63,13 +63,30 @@ function createMascotWindow() {
     return;
   }
 
+  // Calculate bottom right corner positioning based on primary display metrics
+  let x = undefined;
+  let y = undefined;
+  try {
+    const primaryDisplay = screen.getPrimaryDisplay();
+    const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+    const windowWidth = 300;
+    const windowHeight = 420;
+    x = screenWidth - windowWidth - 20; // 20px from right edge
+    y = screenHeight - windowHeight - 30; // 30px from bottom taskbar
+  } catch (err) {
+    console.error("Failed to calculate screen position:", err);
+  }
+
   mascotWindow = new BrowserWindow({
-    width: 280,
-    height: 380,
+    width: 300,
+    height: 420,
+    x: x,
+    y: y,
     frame: false,
     transparent: true,
     alwaysOnTop: true,
     resizable: false,
+    hasShadow: false,
     skipTaskbar: true,
     webPreferences: {
       nodeIntegration: true,
