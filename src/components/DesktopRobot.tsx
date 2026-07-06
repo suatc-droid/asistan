@@ -110,21 +110,185 @@ export function DesktopRobot({
   const [robotState, setRobotState] = useState<RobotState>('idle');
   const [bubbleText, setBubbleText] = useState<string>('Merhaba! Ben senin Kurumsal Süreç Asistanınım. Bugün hangi süreci takip ediyoruz? 🤖\n\n💡 İpucu: Üzerime sağ tıklayarak özel menümü açabilirsin!');
   const [showBubble, setShowBubble] = useState(true);
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('pet_sound_enabled');
+      return saved === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const setSoundEnabled = (val: boolean | ((prev: boolean) => boolean)) => {
+    setSoundEnabledState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('pet_sound_enabled', next.toString()); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('pet_sync_event', { detail: { key: 'pet_sound_enabled', value: next.toString() } }));
+      return next;
+    });
+  };
+
   const [tipIndex, setTipIndex] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
 
   // Pet care system & personalization
-  const [costume, setCostume] = useState<'classic' | 'expert' | 'stethoscope' | 'glasses'>('classic');
-  const [loveLevel, setLoveLevel] = useState<number>(85);
-  const [energyLevel, setEnergyLevel] = useState<number>(75);
-  const [fontSizeMode, setFontSizeMode] = useState<'normal' | 'large' | 'xlarge'>('large'); // default to larger
+  const [costume, setCostumeState] = useState<'classic' | 'expert' | 'stethoscope' | 'glasses'>(() => {
+    try {
+      const saved = localStorage.getItem('pet_costume');
+      if (saved) return saved as any;
+    } catch (e) {}
+    return 'classic';
+  });
+
+  const setCostume = (val: 'classic' | 'expert' | 'stethoscope' | 'glasses' | ((prev: any) => any)) => {
+    setCostumeState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('pet_costume', next); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('pet_sync_event', { detail: { key: 'pet_costume', value: next } }));
+      return next;
+    });
+  };
+
+  const [energyLevel, setEnergyLevelState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('pet_energy');
+      if (saved) return parseInt(saved, 10);
+    } catch (e) {}
+    return 75;
+  });
+
+  const setEnergyLevel = (val: number | ((prev: number) => number)) => {
+    setEnergyLevelState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      const capped = Math.max(0, Math.min(100, next));
+      try { localStorage.setItem('pet_energy', capped.toString()); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('pet_sync_event', { detail: { key: 'pet_energy', value: capped.toString() } }));
+      return capped;
+    });
+  };
+
+  const [fontSizeMode, setFontSizeModeState] = useState<'normal' | 'large' | 'xlarge'>(() => {
+    try {
+      const saved = localStorage.getItem('pet_font_size');
+      if (saved) return saved as any;
+    } catch (e) {}
+    return 'large';
+  });
+
+  const setFontSizeMode = (val: 'normal' | 'large' | 'xlarge' | ((prev: any) => any)) => {
+    setFontSizeModeState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('pet_font_size', next); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('pet_sync_event', { detail: { key: 'pet_font_size', value: next } }));
+      return next;
+    });
+  };
+
+  const [petName, setPetNameState] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('pet_name');
+      if (saved) return saved;
+    } catch (e) {}
+    return 'Sürecik 🤖';
+  });
+
+  const setPetName = (val: string | ((prev: string) => string)) => {
+    setPetNameState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('pet_name', next); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('pet_sync_event', { detail: { key: 'pet_name', value: next } }));
+      return next;
+    });
+  };
+
+  const [soundTheme, setSoundThemeState] = useState<'retro' | 'modern' | 'futuristic'>(() => {
+    try {
+      const saved = localStorage.getItem('pet_sound_theme');
+      if (saved === 'retro' || saved === 'modern' || saved === 'futuristic') return saved;
+    } catch (e) {}
+    return 'modern';
+  });
+
+  const setSoundTheme = (val: 'retro' | 'modern' | 'futuristic' | ((prev: any) => any)) => {
+    setSoundThemeState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('pet_sound_theme', next); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('pet_sync_event', { detail: { key: 'pet_sound_theme', value: next } }));
+      return next;
+    });
+  };
 
   // Quiz game state
   const [currentQuizIndex, setCurrentQuizIndex] = useState<number | null>(null);
   const [quizAnswered, setQuizAnswered] = useState<boolean>(false);
   const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
-  const [quizScore, setQuizScore] = useState<number>(0);
+
+  const [quizScore, setQuizScoreState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('pet_quiz_score');
+      if (saved) return parseInt(saved, 10);
+    } catch (e) {}
+    return 0;
+  });
+
+  const setQuizScore = (val: number | ((prev: number) => number)) => {
+    setQuizScoreState(prev => {
+      const next = typeof val === 'function' ? val(prev) : val;
+      try { localStorage.setItem('pet_quiz_score', next.toString()); } catch (e) {}
+      window.dispatchEvent(new CustomEvent('pet_sync_event', { detail: { key: 'pet_quiz_score', value: next.toString() } }));
+      return next;
+    });
+  };
+
+  // Sync state between parent window and standalone window in real time via storage / custom event listener
+  useEffect(() => {
+    const handleSync = (key: string, newValue: string | null) => {
+      if (!newValue) return;
+      try {
+        if (key === 'pet_costume') {
+          setCostumeState(newValue as any);
+        }
+        if (key === 'pet_name') {
+          setPetNameState(newValue);
+        }
+        if (key === 'pet_energy') {
+          setEnergyLevelState(parseInt(newValue, 10));
+        }
+        if (key === 'pet_font_size') {
+          setFontSizeModeState(newValue as any);
+        }
+        if (key === 'pet_quiz_score') {
+          setQuizScoreState(parseInt(newValue, 10));
+        }
+        if (key === 'pet_sound_enabled') {
+          setSoundEnabledState(newValue === 'true');
+        }
+        if (key === 'pet_sound_theme') {
+          setSoundThemeState(newValue as any);
+        }
+      } catch (err) {
+        console.error("Sync error:", err);
+      }
+    };
+
+    const handleStorageChange = (e: StorageEvent) => {
+      handleSync(e.key || '', e.newValue);
+    };
+
+    const handleCustomChange = (e: Event) => {
+      const customEv = e as CustomEvent<{ key: string; value: string }>;
+      if (customEv.detail) {
+        handleSync(customEv.detail.key, customEv.detail.value);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('pet_sync_event', handleCustomChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('pet_sync_event', handleCustomChange);
+    };
+  }, []);
 
   // Desktop Pet specific state variables
   const [isRoaming, setIsRoaming] = useState(false);
@@ -403,11 +567,26 @@ export function DesktopRobot({
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, ctx.currentTime);
-      
-      gain.gain.setValueAtTime(0.05, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration / 1000);
+      if (soundTheme === 'retro') {
+        // Retro 8-bit chip-tune theme (square waves, quick decays)
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.018, ctx.currentTime); // Keep square wave comfortable
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+      } else if (soundTheme === 'futuristic') {
+        // Futuristic sci-fi UI pitch sweeps
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq * 0.75, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(freq * 1.8, ctx.currentTime + duration / 1000);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+      } else {
+        // Modern clean ambient theme (sine waves)
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, ctx.currentTime);
+        gain.gain.setValueAtTime(0.04, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration / 1000);
+      }
       
       osc.connect(gain);
       gain.connect(ctx.destination);
@@ -483,14 +662,13 @@ export function DesktopRobot({
     setCurrentQuizIndex(null); // Close quiz if open
     
     if (action === 'stroke') {
-      setLoveLevel(prev => Math.min(100, prev + 10));
-      handleInteract('happy', "Kafamı okşadın! Sevgi bağımız güçleniyor, canım dostum! 🥰❤️");
+      setEnergyLevel(prev => Math.min(100, prev + 10));
+      handleInteract('happy', "Kafamı okşadın! Enerjim tazelendi ve çok mutlu oldum, teşekkürler dostum! 🥰⚡🔋");
       // Double sweet high tone
       playBeep(659, 100);
       setTimeout(() => playBeep(880, 150), 110);
     } else if (action === 'feed_doc') {
       setEnergyLevel(prev => Math.min(100, prev + 15));
-      setLoveLevel(prev => Math.min(100, prev + 5));
       handleInteract('happy', "Hımm, taptaze bir Mevzuat Genelgesi! Harika bir beyin fırtınası gıdası, enerjim tavan yaptı! 📑🔋⚡");
       // Futuristic rise tone
       [392, 523, 659, 784].forEach((freq, idx) => {
@@ -525,8 +703,7 @@ export function DesktopRobot({
     
     if (optionIdx === question.correctIndex) {
       setQuizScore(prev => prev + 1);
-      setLoveLevel(prev => Math.min(100, prev + 8));
-      setEnergyLevel(prev => Math.min(100, prev + 5));
+      setEnergyLevel(prev => Math.min(100, prev + 10));
       setRobotState('happy');
       // Correct answer chime!
       const notes = [523, 659, 784, 1046];
@@ -586,6 +763,20 @@ export function DesktopRobot({
 
                 <div className="h-px bg-slate-800 my-0.5"></div>
 
+                {/* Inline Name Editor */}
+                <div className="px-2 py-1 flex flex-col gap-1 text-[10px]">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🏷️ Asistan İsmi</span>
+                  <div className="flex gap-1 mb-1">
+                    <input
+                      type="text"
+                      value={petName}
+                      onChange={(e) => setPetName(e.target.value)}
+                      placeholder="Asistan ismi..."
+                      className="bg-slate-900 text-white text-[10.5px] px-2 py-1 rounded border border-slate-800 flex-1 outline-none focus:border-blue-500 font-bold"
+                    />
+                  </div>
+                </div>
+
                 {/* Custom Interactive Selectors inside Context Menu (Dark Mode Styled for Standalone) */}
                 <div className="px-2 py-1 flex flex-col gap-1 text-[10px]">
                   <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🎭 Kostüm Değiştir</span>
@@ -629,7 +820,27 @@ export function DesktopRobot({
                 </div>
 
                 <div className="px-2 py-1 flex flex-col gap-1 text-[10px]">
-                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">❤️ Pet Bakımı (Besleme & Sevgi)</span>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🎶 Ses Efekti Teması</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'retro', label: 'Retro 👾' },
+                      { id: 'modern', label: 'Modern ✨' },
+                      { id: 'futuristic', label: 'Fütüristik 🚀' }
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => { setSoundTheme(item.id as any); setTimeout(() => playBeep(520, 100), 50); }}
+                        className={`px-1 py-1 rounded text-center text-[9px] font-bold border transition-all ${soundTheme === item.id ? 'bg-sky-600 text-white border-sky-500 shadow-sm' : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-850'}`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="px-2 py-1 flex flex-col gap-1 text-[10px]">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🔋 Pet Bakımı (Besleme & Sevme)</span>
                   <div className="grid grid-cols-3 gap-1">
                     <button
                       type="button"
@@ -666,23 +877,6 @@ export function DesktopRobot({
                 >
                   <HelpCircle size={13} className="text-amber-400" />
                   <span>Mevzuat İpucu Ver</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setIsRoaming(!isRoaming);
-                    setContextMenu(null);
-                    handleInteract('happy', !isRoaming ? "Yuppi! Ekranında keşfe çıkıyorum! 🛸✨" : "Gezinmeyi durdurdum, dinleniyorum! 🛋️");
-                  }}
-                  className="w-full text-left px-2 py-2 hover:bg-slate-800 rounded-lg transition-colors flex items-center justify-between text-xs font-medium"
-                >
-                  <span className="flex items-center gap-2">
-                    <Sparkles size={13} className="text-purple-400" />
-                    <span>Serbest Dolaşım Modu</span>
-                  </span>
-                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${isRoaming ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
-                    {isRoaming ? "Açık" : "Kapalı"}
-                  </span>
                 </button>
 
                 <button
@@ -782,7 +976,7 @@ export function DesktopRobot({
                       <div className="flex flex-col gap-1.5 mt-1 p-2 rounded-xl border bg-slate-50 border-slate-100 animate-fade-in text-[10px]">
                         <div className="flex items-center gap-1">
                           {selectedAnswerIndex === quizQuestions[currentQuizIndex].correctIndex ? (
-                            <span className="text-emerald-600 font-extrabold flex items-center gap-1">🎉 Doğru! (+8 Sevgi, +5 Enerji)</span>
+                            <span className="text-emerald-600 font-extrabold flex items-center gap-1">🎉 Doğru! (+10 Enerji)</span>
                           ) : (
                             <span className="text-rose-600 font-extrabold">❌ Yanlış! Doğrusu: {String.fromCharCode(65 + quizQuestions[currentQuizIndex].correctIndex)}</span>
                           )}
@@ -812,19 +1006,13 @@ export function DesktopRobot({
                 ) : (
                   <>
                     {/* Status/Levels Bar in normal bubble view */}
-                    <div className="flex items-center gap-2 text-[9px] text-slate-400 font-bold border-b border-slate-100 pb-1.5 mb-0.5 justify-between">
-                      <div className="flex items-center gap-1">
-                        <Heart size={10} className="text-rose-500 fill-rose-500 animate-pulse" />
-                        <span>Sevgi:</span>
-                        <div className="w-8 bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${loveLevel}%` }} />
-                        </div>
-                        <span className="text-[9px] text-rose-600">{loveLevel}%</span>
+                    <div className="flex items-center justify-between gap-1.5 text-[9px] text-slate-400 font-bold border-b border-slate-100 pb-1.5 mb-1 bg-amber-50/25 py-1 px-1.5 rounded-lg">
+                      <div className="flex items-center gap-1 text-slate-600 font-extrabold shrink-0">
+                        <span>💬 {petName}</span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Zap size={10} className="text-amber-500 fill-amber-500" />
-                        <span>Enerji:</span>
-                        <div className="w-8 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                        <Zap size={10} className="text-amber-500 fill-amber-500 animate-bounce" />
+                        <div className="w-16 bg-slate-200 h-1.5 rounded-full overflow-hidden">
                           <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${energyLevel}%` }} />
                         </div>
                         <span className="text-[9px] text-amber-600">{energyLevel}%</span>
@@ -1085,7 +1273,7 @@ export function DesktopRobot({
                       <div className="flex flex-col gap-2 mt-1 p-2.5 rounded-xl border bg-slate-50 border-slate-100 animate-fade-in">
                         <div className="flex items-center gap-1">
                           {selectedAnswerIndex === quizQuestions[currentQuizIndex].correctIndex ? (
-                            <span className="text-emerald-600 font-extrabold flex items-center gap-1 text-xs">🎉 Doğru! (+8 Sevgi, +5 Enerji)</span>
+                            <span className="text-emerald-600 font-extrabold flex items-center gap-1 text-xs">🎉 Doğru! (+10 Enerji)</span>
                           ) : (
                             <span className="text-rose-600 font-extrabold text-xs">❌ Yanlış! Doğru Cevap: {String.fromCharCode(65 + quizQuestions[currentQuizIndex].correctIndex)}</span>
                           )}
@@ -1115,19 +1303,13 @@ export function DesktopRobot({
                 ) : (
                   <>
                     {/* Status/Levels Bar in normal bubble view */}
-                    <div className="flex items-center gap-3 text-[10px] text-slate-400 font-bold border-b border-slate-100 pb-2 mb-0.5 justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <Heart size={11} className="text-rose-500 fill-rose-500 animate-pulse" />
-                        <span>Sevgi:</span>
-                        <div className="w-12 bg-slate-200 h-1.5 rounded-full overflow-hidden">
-                          <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${loveLevel}%` }} />
-                        </div>
-                        <span className="text-[10px] text-rose-600">{loveLevel}%</span>
+                    <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-bold border-b border-slate-100 pb-2 mb-1.5 bg-amber-50/25 py-1.5 px-2 rounded-xl">
+                      <div className="flex items-center gap-1.5 text-slate-600 font-extrabold shrink-0">
+                        <span>💬 {petName}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Zap size={11} className="text-amber-500 fill-amber-500" />
-                        <span>Enerji:</span>
-                        <div className="w-12 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                        <Zap size={11} className="text-amber-500 fill-amber-500 animate-bounce" />
+                        <div className="w-24 bg-slate-200 h-1.5 rounded-full overflow-hidden">
                           <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${energyLevel}%` }} />
                         </div>
                         <span className="text-[10px] text-amber-600">{energyLevel}%</span>
@@ -1275,7 +1457,15 @@ export function DesktopRobot({
                     <rect x="28" y="26" width="44" height="34" rx="10" fill="#1e293b" />
 
                     {/* Eyes rendering depending on emotional state */}
-                    {robotState === 'happy' ? (
+                    {energyLevel < 35 ? (
+                      <>
+                        {/* Sleepy droopy eyes */}
+                        <ellipse cx="39" cy="45" rx="5" ry="2.5" fill="#60a5fa" />
+                        <ellipse cx="61" cy="45" rx="5" ry="2.5" fill="#60a5fa" />
+                        <path d="M 33 40 Q 39 42 45 40" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
+                        <path d="M 55 40 Q 61 42 67 40" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" />
+                      </>
+                    ) : robotState === 'happy' ? (
                       <>
                         <path d="M 34 45 Q 39 37 44 45" fill="none" stroke="#60a5fa" strokeWidth="4" strokeLinecap="round" />
                         <path d="M 56 45 Q 61 37 66 45" fill="none" stroke="#60a5fa" strokeWidth="4" strokeLinecap="round" />
@@ -1394,6 +1584,20 @@ export function DesktopRobot({
               <span>Asistan Seçenekleri</span>
             </div>
             
+            {/* Inline Name Editor for Main View */}
+            <div className="px-3.5 py-2 flex flex-col gap-1 text-[10px] border-b border-slate-50 bg-slate-50/50">
+              <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🏷️ Asistan İsmi</span>
+              <div className="flex gap-1">
+                <input
+                  type="text"
+                  value={petName}
+                  onChange={(e) => setPetName(e.target.value)}
+                  placeholder="Asistan ismi..."
+                  className="bg-white text-slate-800 text-[10.5px] px-2 py-1 rounded border border-slate-200 flex-1 outline-none focus:border-blue-500 font-bold shadow-sm"
+                />
+              </div>
+            </div>
+
             <button
               onClick={() => {
                 setIsAssistantOpen(true);
@@ -1531,7 +1735,27 @@ export function DesktopRobot({
             </div>
 
             <div className="px-3.5 py-1.5 flex flex-col gap-1 text-[10px]">
-              <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">❤️ Pet Bakımı (Besleme & Sevgi)</span>
+              <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🎶 Ses Efekti Teması</span>
+              <div className="grid grid-cols-3 gap-1">
+                {[
+                  { id: 'retro', label: 'Retro 👾' },
+                  { id: 'modern', label: 'Modern ✨' },
+                  { id: 'futuristic', label: 'Fütüristik 🚀' }
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => { setSoundTheme(item.id as any); setTimeout(() => playBeep(520, 100), 50); }}
+                    className={`px-1 py-1 rounded text-center text-[9px] font-bold border transition-all ${soundTheme === item.id ? 'bg-sky-600 text-white border-sky-500 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-3.5 py-1.5 flex flex-col gap-1 text-[10px]">
+              <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🔋 Pet Bakımı (Besleme & Sevme)</span>
               <div className="grid grid-cols-3 gap-1">
                 <button
                   type="button"
