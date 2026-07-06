@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, Tray } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, dialog } = require('electron');
 const path = require('path');
 
 let mainWindow;
@@ -18,6 +18,10 @@ function startExpressServer() {
     console.log("Express server loaded successfully inside main process!");
   } catch (error) {
     console.error("Failed to load express server internally:", error);
+    dialog.showErrorBox(
+      "Sunucu Başlatma Hatası",
+      `Arka plan sunucusu başlatılamadı.\nHata Detayı: ${error.message}\n\nLütfen uygulamayı yönetici olarak çalıştırmayı deneyin veya sistem yöneticinize danışın.`
+    );
   }
 }
 
@@ -32,8 +36,20 @@ function createMainWindow() {
     }
   });
 
-  // Load local express server or falling back to built assets
+  // Load local express server
   mainWindow.loadURL('http://localhost:3000');
+
+  // Retry on connection/load failure (e.g. if express is still starting up)
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (validatedURL.startsWith('http://localhost:3000')) {
+      console.log('Main window failed to load, retrying in 500ms...');
+      setTimeout(() => {
+        if (mainWindow) {
+          mainWindow.loadURL('http://localhost:3000');
+        }
+      }, 500);
+    }
+  });
 
   mainWindow.on('closed', () => {
     mainWindow = null;
@@ -62,6 +78,17 @@ function createMascotWindow() {
   });
 
   mascotWindow.loadURL('http://localhost:3000/?view=mascot-only');
+
+  // Retry on connection/load failure (e.g. if express is still starting up)
+  mascotWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (validatedURL.startsWith('http://localhost:3000')) {
+      setTimeout(() => {
+        if (mascotWindow) {
+          mascotWindow.loadURL('http://localhost:3000/?view=mascot-only');
+        }
+      }, 500);
+    }
+  });
 
   mascotWindow.on('closed', () => {
     mascotWindow = null;
