@@ -143,6 +143,15 @@ function App() {
       setSelectedStep(null);
     }
   }, [activeWorkflow]);
+
+  // Set body background to transparent if in mascot-only view
+  useEffect(() => {
+    const isMascotOnly = typeof window !== 'undefined' && window.location.search.includes('view=mascot-only');
+    if (isMascotOnly) {
+      document.body.style.backgroundColor = 'transparent';
+      document.documentElement.style.backgroundColor = 'transparent';
+    }
+  }, []);
   
   // PWA Support state
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -848,7 +857,7 @@ Konu : [Konu]
 
   if (isMascotOnly) {
     return (
-      <div className="fixed inset-0 w-screen h-screen bg-slate-50 overflow-hidden flex items-center justify-center">
+      <div className="fixed inset-0 w-screen h-screen bg-transparent overflow-hidden flex items-center justify-center">
         <DesktopRobot
           setIsAssistantOpen={() => {}}
           openNewTemplateModal={() => {}}
