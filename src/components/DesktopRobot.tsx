@@ -17,9 +17,59 @@ import {
   Pencil,
   Check,
   CheckCircle,
-  ShieldAlert
+  ShieldAlert,
+  Heart,
+  Award,
+  BookOpen,
+  Smile
 } from 'lucide-react';
 import { WorkflowTemplate, ActiveStep } from '../types';
+
+interface QuizQuestion {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  explanation: string;
+}
+
+const quizQuestions: QuizQuestion[] = [
+  {
+    question: "657 Sayılı Devlet Memurları Kanunu'na göre mazeretsiz ve kesintisiz kaç gün göreve gelmeyen memur müstafi (çekilmiş) sayılır?",
+    options: ["5 gün", "7 gün", "10 gün", "15 gün"],
+    correctIndex: 2,
+    explanation: "657 DMK Md. 94 uyarınca izinsiz veya özürsüz kesintisiz 10 gün görevini terk eden memur müstafi sayılır."
+  },
+  {
+    question: "Doğum yapan kadın memura doğum sonrası ilk altı ayda günde kaç saat süt izni verilir?",
+    options: ["1 saat", "1.5 saat", "2 saat", "3 saat"],
+    correctIndex: 3,
+    explanation: "657 DMK Md. 104/D uyarınca doğum sonrası ilk altı ayda günde 3 saat, ikinci altı ayda ise günde 1.5 saat süt izni verilir."
+  },
+  {
+    question: "Sözleşmeli personelin (4/B) kullanılmayan yıllık izinleri hakkında hangisi doğrudur?",
+    options: ["Sonraki yıla devreder", "Sonraki yıla devredemez, yanar", "Para iadesi yapılır", "Ertesi yıla sadece yarısı devreder"],
+    correctIndex: 1,
+    explanation: "Sözleşmeli Personel Çalıştırılmasına İlişkin Esaslar gereğince 4/B personelin yıllık izni takvim yılı sonunda yanar, sonraki yıla devretmez."
+  },
+  {
+    question: "Sağlık personeline her yıl yıllık izinlerine ek olarak verilen ücretli şua izni kaç gündür?",
+    options: ["10 gün", "15 gün", "20 gün", "30 gün"],
+    correctIndex: 3,
+    explanation: "Radyasyonla çalışan sağlık personeline her yıl yıllık izinlerine ilaveten 30 gün ücretli sağlık izni (şua izni) verilmesi yasal bir zorunluluktur."
+  },
+  {
+    question: "657 DMK'ya göre aday memurluk süresi en fazla ne kadar olabilir?",
+    options: ["6 ay", "1 yıl", "2 yıl", "3 yıl"],
+    correctIndex: 2,
+    explanation: "657 DMK Md. 54 uyarınca aday memurluk süresi asgari 1 yıl, azami 2 yıl olabilir."
+  },
+  {
+    question: "Kamu görevlilerinin mal bildirimi beyanlarını sonu hangi rakamlarla biten yıllarda yenilemeleri zorunludur?",
+    options: ["Her yıl", "Tek yıllar", "(0) ve (5) ile biten", "Çift yıllar"],
+    correctIndex: 2,
+    explanation: "3628 Sayılı Kanun Md. 6 gereğince mal bildirimleri sonu (0) ve (5) ile biten yıllarda en geç Şubat ayı sonuna kadar yenilenmelidir."
+  }
+];
 
 interface DesktopRobotProps {
   setIsAssistantOpen: (open: boolean) => void;
@@ -42,6 +92,20 @@ export function DesktopRobot({
 }: DesktopRobotProps) {
   const constraintsRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(true);
+
+  const getFontClass = (type: 'bubble' | 'title' | 'options') => {
+    if (type === 'bubble') {
+      if (fontSizeMode === 'normal') return 'text-xs';
+      if (fontSizeMode === 'large') return 'text-sm';
+      return 'text-base';
+    }
+    if (type === 'title') {
+      if (fontSizeMode === 'normal') return 'text-[10px]';
+      if (fontSizeMode === 'large') return 'text-xs';
+      return 'text-sm';
+    }
+    return fontSizeMode === 'normal' ? 'text-[10px]' : fontSizeMode === 'large' ? 'text-xs' : 'text-sm';
+  };
   const [isMinimized, setIsMinimized] = useState(false);
   const [robotState, setRobotState] = useState<RobotState>('idle');
   const [bubbleText, setBubbleText] = useState<string>('Merhaba! Ben senin Kurumsal Süreç Asistanınım. Bugün hangi süreci takip ediyoruz? 🤖\n\n💡 İpucu: Üzerime sağ tıklayarak özel menümü açabilirsin!');
@@ -49,6 +113,18 @@ export function DesktopRobot({
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [tipIndex, setTipIndex] = useState(0);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number } | null>(null);
+
+  // Pet care system & personalization
+  const [costume, setCostume] = useState<'classic' | 'expert' | 'stethoscope' | 'glasses'>('classic');
+  const [loveLevel, setLoveLevel] = useState<number>(85);
+  const [energyLevel, setEnergyLevel] = useState<number>(75);
+  const [fontSizeMode, setFontSizeMode] = useState<'normal' | 'large' | 'xlarge'>('large'); // default to larger
+
+  // Quiz game state
+  const [currentQuizIndex, setCurrentQuizIndex] = useState<number | null>(null);
+  const [quizAnswered, setQuizAnswered] = useState<boolean>(false);
+  const [selectedAnswerIndex, setSelectedAnswerIndex] = useState<number | null>(null);
+  const [quizScore, setQuizScore] = useState<number>(0);
 
   // Desktop Pet specific state variables
   const [isRoaming, setIsRoaming] = useState(false);
@@ -403,6 +479,67 @@ export function DesktopRobot({
     });
   };
 
+  const handlePetAction = (action: 'stroke' | 'feed_doc' | 'give_coffee') => {
+    setCurrentQuizIndex(null); // Close quiz if open
+    
+    if (action === 'stroke') {
+      setLoveLevel(prev => Math.min(100, prev + 10));
+      handleInteract('happy', "Kafamı okşadın! Sevgi bağımız güçleniyor, canım dostum! 🥰❤️");
+      // Double sweet high tone
+      playBeep(659, 100);
+      setTimeout(() => playBeep(880, 150), 110);
+    } else if (action === 'feed_doc') {
+      setEnergyLevel(prev => Math.min(100, prev + 15));
+      setLoveLevel(prev => Math.min(100, prev + 5));
+      handleInteract('happy', "Hımm, taptaze bir Mevzuat Genelgesi! Harika bir beyin fırtınası gıdası, enerjim tavan yaptı! 📑🔋⚡");
+      // Futuristic rise tone
+      [392, 523, 659, 784].forEach((freq, idx) => {
+        setTimeout(() => playBeep(freq, 90), idx * 100);
+      });
+    } else if (action === 'give_coffee') {
+      setEnergyLevel(prev => Math.min(100, prev + 20));
+      handleInteract('happy', "Oooh, sıcacık bir fincan köpüklü Türk Kahvesi! Teşekkürler, şimdi tüm süreçleri anında tamamlayabiliriz! ☕⚡🚀");
+      // Energetic coffee tune
+      [523, 392, 523, 784].forEach((freq, idx) => {
+        setTimeout(() => playBeep(freq, 90), idx * 100);
+      });
+    }
+  };
+
+  const handleStartQuiz = () => {
+    const randomIdx = Math.floor(Math.random() * quizQuestions.length);
+    setCurrentQuizIndex(randomIdx);
+    setQuizAnswered(false);
+    setSelectedAnswerIndex(null);
+    setRobotState('thinking');
+    playBeep(440, 100);
+    setTimeout(() => playBeep(554, 100), 110);
+  };
+
+  const handleSelectQuizAnswer = (optionIdx: number) => {
+    if (currentQuizIndex === null || quizAnswered) return;
+    
+    const question = quizQuestions[currentQuizIndex];
+    setSelectedAnswerIndex(optionIdx);
+    setQuizAnswered(true);
+    
+    if (optionIdx === question.correctIndex) {
+      setQuizScore(prev => prev + 1);
+      setLoveLevel(prev => Math.min(100, prev + 8));
+      setEnergyLevel(prev => Math.min(100, prev + 5));
+      setRobotState('happy');
+      // Correct answer chime!
+      const notes = [523, 659, 784, 1046];
+      notes.forEach((freq, idx) => {
+        setTimeout(() => playBeep(freq, 120), idx * 110);
+      });
+    } else {
+      setRobotState('sleepy');
+      // Sad wrong buzzer
+      playBeep(220, 300);
+    }
+  };
+
   const handleContextMenu = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -435,6 +572,90 @@ export function DesktopRobot({
                     <X size={12} />
                   </button>
                 </div>
+
+                <button
+                  onClick={() => {
+                    handleStartQuiz();
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-2 hover:bg-amber-950 hover:text-amber-300 rounded-lg transition-colors flex items-center gap-2 text-xs font-bold text-amber-400"
+                >
+                  <Award size={13} className="text-amber-500 animate-bounce" />
+                  <span>Mevzuat Bilgi Sınavı 🏆</span>
+                </button>
+
+                <div className="h-px bg-slate-800 my-0.5"></div>
+
+                {/* Custom Interactive Selectors inside Context Menu (Dark Mode Styled for Standalone) */}
+                <div className="px-2 py-1 flex flex-col gap-1 text-[10px]">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🎭 Kostüm Değiştir</span>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      { id: 'classic', label: 'Mavi' },
+                      { id: 'expert', label: 'Uzman' },
+                      { id: 'stethoscope', label: 'Hekim' },
+                      { id: 'glasses', label: 'Tarz' }
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => { setCostume(item.id as any); playBeep(520, 80); }}
+                        className={`px-1 py-1 rounded text-center text-[9px] font-bold border transition-all ${costume === item.id ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-850'}`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="px-2 py-1 flex flex-col gap-1 text-[10px]">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🔍 Metin Boyutu</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    {[
+                      { id: 'normal', label: 'Normal' },
+                      { id: 'large', label: 'Büyük' },
+                      { id: 'xlarge', label: 'X-Büyük' }
+                    ].map(item => (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => { setFontSizeMode(item.id as any); playBeep(520, 80); }}
+                        className={`px-1 py-1 rounded text-center text-[9px] font-bold border transition-all ${fontSizeMode === item.id ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-900 text-slate-300 border-slate-800 hover:bg-slate-850'}`}
+                      >
+                        {item.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="px-2 py-1 flex flex-col gap-1 text-[10px]">
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">❤️ Pet Bakımı (Besleme & Sevgi)</span>
+                  <div className="grid grid-cols-3 gap-1">
+                    <button
+                      type="button"
+                      onClick={() => { handlePetAction('stroke'); setContextMenu(null); }}
+                      className="px-1 py-1 bg-rose-950 border border-rose-900/50 hover:bg-rose-900 text-rose-300 rounded text-center text-[9px] font-bold transition-all flex items-center justify-center gap-0.5"
+                    >
+                      <span>Okşa 👋</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { handlePetAction('feed_doc'); setContextMenu(null); }}
+                      className="px-1 py-1 bg-emerald-950 border border-emerald-900/50 hover:bg-emerald-900 text-emerald-300 rounded text-center text-[9px] font-bold transition-all flex items-center justify-center gap-0.5"
+                    >
+                      <span>Genelge 📑</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { handlePetAction('give_coffee'); setContextMenu(null); }}
+                      className="px-1 py-1 bg-amber-950 border border-amber-900/50 hover:bg-amber-900 text-amber-300 rounded text-center text-[9px] font-bold transition-all flex items-center justify-center gap-0.5"
+                    >
+                      <span>Kahve ☕</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="h-px bg-slate-800 my-0.5"></div>
 
                 <button
                   onClick={() => {
@@ -531,34 +752,115 @@ export function DesktopRobot({
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 className="relative w-[245px] bg-white rounded-2xl p-3.5 shadow-2xl border border-slate-200/90 flex flex-col gap-2 text-slate-800 mb-2.5"
               >
-                {/* Bubble Text */}
-                <p className="text-xs font-semibold leading-relaxed text-slate-800 whitespace-pre-line max-h-24 overflow-y-auto pr-1">
-                  {bubbleText}
-                </p>
+                {currentQuizIndex !== null ? (
+                  <div className="flex flex-col gap-2 w-full">
+                    <div className="flex items-center gap-1.5 text-blue-600 font-bold border-b border-slate-100 pb-1.5">
+                      <Award size={13} className="animate-bounce shrink-0" />
+                      <span className={`${getFontClass('title')} truncate`}>Mevzuat Sınavı ({currentQuizIndex + 1})</span>
+                      <span className="ml-auto text-[9px] bg-blue-100 px-1.5 py-0.5 rounded-full text-blue-800 font-black shrink-0">Skor: {quizScore}</span>
+                    </div>
+                    
+                    <p className={`${getFontClass('bubble')} font-semibold leading-relaxed text-slate-800 max-h-24 overflow-y-auto pr-1`}>
+                      {quizQuestions[currentQuizIndex].question}
+                    </p>
 
-                {/* Compact Actions inside speech bubble */}
-                <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-0.5">
-                  <div className="flex gap-1.5">
-                    <button
-                      onClick={showNextTip}
-                      className="bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md py-1 px-2.5 text-[10px] font-extrabold transition-all border border-amber-100/50"
-                    >
-                      İpucu 💡
-                    </button>
-                    <button
-                      onClick={() => setSoundEnabled(!soundEnabled)}
-                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md py-1 px-1.5 text-[10px] transition-all border border-slate-200/30 flex items-center justify-center"
-                    >
-                      {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
-                    </button>
+                    {!quizAnswered ? (
+                      <div className="flex flex-col gap-1 mt-1">
+                        {quizQuestions[currentQuizIndex].options.map((opt, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectQuizAnswer(idx)}
+                            className="w-full text-left px-2.5 py-1.5 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-xl transition-all duration-200 text-[11px] font-semibold text-slate-700 hover:text-blue-800 flex items-center justify-between"
+                          >
+                            <span className="truncate pr-1">{opt}</span>
+                            <span className="text-[9px] font-black text-slate-400 border border-slate-200 px-1 rounded bg-slate-50 uppercase shrink-0">{String.fromCharCode(65 + idx)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-1.5 mt-1 p-2 rounded-xl border bg-slate-50 border-slate-100 animate-fade-in text-[10px]">
+                        <div className="flex items-center gap-1">
+                          {selectedAnswerIndex === quizQuestions[currentQuizIndex].correctIndex ? (
+                            <span className="text-emerald-600 font-extrabold flex items-center gap-1">🎉 Doğru! (+8 Sevgi, +5 Enerji)</span>
+                          ) : (
+                            <span className="text-rose-600 font-extrabold">❌ Yanlış! Doğrusu: {String.fromCharCode(65 + quizQuestions[currentQuizIndex].correctIndex)}</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-normal italic">
+                          {quizQuestions[currentQuizIndex].explanation}
+                        </p>
+                        <div className="flex gap-1 mt-1">
+                          <button
+                            type="button"
+                            onClick={handleStartQuiz}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-[9px] py-1 rounded transition-colors flex items-center justify-center gap-1 shadow-sm"
+                          >
+                            Sıradaki ➡️
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setCurrentQuizIndex(null); handleInteract('happy', "Beyin jimnastiği harikaydı! 😊"); }}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-[9px] py-1 px-2.5 rounded transition-colors"
+                          >
+                            Kapat
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <button 
-                    onClick={() => setShowBubble(false)}
-                    className="text-slate-400 hover:text-slate-600 transition-colors p-1"
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
+                ) : (
+                  <>
+                    {/* Status/Levels Bar in normal bubble view */}
+                    <div className="flex items-center gap-2 text-[9px] text-slate-400 font-bold border-b border-slate-100 pb-1.5 mb-0.5 justify-between">
+                      <div className="flex items-center gap-1">
+                        <Heart size={10} className="text-rose-500 fill-rose-500 animate-pulse" />
+                        <span>Sevgi:</span>
+                        <div className="w-8 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${loveLevel}%` }} />
+                        </div>
+                        <span className="text-[9px] text-rose-600">{loveLevel}%</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Zap size={10} className="text-amber-500 fill-amber-500" />
+                        <span>Enerji:</span>
+                        <div className="w-8 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${energyLevel}%` }} />
+                        </div>
+                        <span className="text-[9px] text-amber-600">{energyLevel}%</span>
+                      </div>
+                    </div>
+
+                    {/* Bubble Text */}
+                    <p className={`${getFontClass('bubble')} font-semibold leading-relaxed text-slate-800 whitespace-pre-line max-h-24 overflow-y-auto pr-1`}>
+                      {bubbleText}
+                    </p>
+
+                    {/* Compact Actions inside speech bubble */}
+                    <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-0.5">
+                      <div className="flex gap-1.5">
+                        <button
+                          onClick={showNextTip}
+                          className="bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md py-1 px-2.5 text-[10px] font-extrabold transition-all border border-amber-100/50"
+                        >
+                          İpucu 💡
+                        </button>
+                        <button
+                          onClick={() => setSoundEnabled(!soundEnabled)}
+                          className="bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md py-1 px-1.5 text-[10px] transition-all border border-slate-200/30 flex items-center justify-center"
+                        >
+                          {soundEnabled ? <Volume2 size={12} /> : <VolumeX size={12} />}
+                        </button>
+                      </div>
+                      <button 
+                        onClick={() => setShowBubble(false)}
+                        className="text-slate-400 hover:text-slate-600 transition-colors p-1"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
+                  </>
+                )}
 
                 {/* Speech Bubble Tail */}
                 <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-r border-b border-slate-200/80 rotate-45" />
@@ -640,6 +942,33 @@ export function DesktopRobot({
                       </>
                     )}
                     <rect x="42" y="52" width="16" height="4" rx="2" fill={robotState === 'thinking' ? '#f59e0b' : '#10b981'} className={robotState === 'thinking' ? 'animate-pulse' : ''} />
+                    
+                    {/* Costumes */}
+                    {costume === 'expert' && (
+                      <>
+                        <polygon points="32,16 50,8 68,16 50,24" fill="#1e1b4b" stroke="#312e81" strokeWidth="1" />
+                        <rect x="48" y="16" width="4" height="6" fill="#1e1b4b" />
+                        <line x1="68" y1="16" x2="72" y2="25" stroke="#eab308" strokeWidth="1" />
+                        <circle cx="72" cy="25" r="2" fill="#eab308" />
+                      </>
+                    )}
+                    {costume === 'stethoscope' && (
+                      <>
+                        <path d="M 28,68 Q 50,88 72,68" fill="none" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
+                        <path d="M 50,78 L 50,86" fill="none" stroke="#e11d48" strokeWidth="2.5" />
+                        <circle cx="50" cy="88" r="4" fill="#f43f5e" stroke="#be123c" strokeWidth="1" />
+                      </>
+                    )}
+                    {costume === 'glasses' && (
+                      <>
+                        <circle cx="39" cy="43" r="10" fill="none" stroke="#eab308" strokeWidth="2.5" />
+                        <circle cx="61" cy="43" r="10" fill="none" stroke="#eab308" strokeWidth="2.5" />
+                        <line x1="49" y1="43" x2="51" y2="43" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" />
+                        {/* Temple pieces */}
+                        <line x1="29" y1="43" x2="22" y2="40" stroke="#eab308" strokeWidth="2" />
+                        <line x1="71" y1="43" x2="78" y2="40" stroke="#eab308" strokeWidth="2" />
+                      </>
+                    )}
                   </svg>
                 </motion.div>
               </div>
@@ -707,7 +1036,7 @@ export function DesktopRobot({
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                   <span className="text-[11px] font-bold text-blue-600 flex items-center gap-1 uppercase tracking-wider">
                     <Zap size={12} className="text-amber-500 animate-pulse" />
-                    Yapay Zekâ Maskotu
+                    Asistan Pet & Yapay Zekâ
                   </span>
                   <div className="flex items-center gap-1.5">
                     <button 
@@ -726,83 +1055,164 @@ export function DesktopRobot({
                   </div>
                 </div>
 
-                <p className="text-sm font-semibold leading-relaxed whitespace-pre-line text-slate-800">
-                  {bubbleText}
-                </p>
+                {currentQuizIndex !== null ? (
+                  <div className="flex flex-col gap-2.5 w-full">
+                    <div className="flex items-center gap-1.5 text-blue-600 font-bold border-b border-slate-100 pb-1.5">
+                      <Award size={13} className="animate-bounce shrink-0" />
+                      <span className={`${getFontClass('title')} truncate`}>Mevzuat Sınavı ({currentQuizIndex + 1})</span>
+                      <span className="ml-auto text-[10px] bg-blue-100 px-2 py-0.5 rounded-full text-blue-800 font-black shrink-0">Skor: {quizScore}</span>
+                    </div>
+                    
+                    <p className={`${getFontClass('bubble')} font-semibold leading-relaxed text-slate-800 max-h-24 overflow-y-auto pr-1`}>
+                      {quizQuestions[currentQuizIndex].question}
+                    </p>
 
-                {/* İSM Daily Report Status Panel */}
-                <div className="border-t border-b border-slate-100 py-2.5 my-0.5">
-                  {ismStatus === 'pending' ? (
-                    <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 flex flex-col gap-2">
-                      <div className="flex items-start gap-2">
-                        <ShieldAlert size={15} className="text-amber-600 shrink-0 mt-0.5 animate-bounce" />
-                        <div className="flex-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Günlük İSM Görevi</p>
-                          <p className="text-[10px] text-amber-700 leading-tight">Günlük Personel Hareket Listesi'ni İl Sağlık Müdürlüğü'ne (İSM) göndermeyi unutmayın!</p>
+                    {!quizAnswered ? (
+                      <div className="flex flex-col gap-1.5 mt-1">
+                        {quizQuestions[currentQuizIndex].options.map((opt, idx) => (
+                          <button
+                            key={idx}
+                            type="button"
+                            onClick={() => handleSelectQuizAnswer(idx)}
+                            className="w-full text-left px-3 py-2 border border-slate-200 hover:border-blue-400 hover:bg-blue-50/50 rounded-xl transition-all duration-200 text-xs font-semibold text-slate-700 hover:text-blue-800 flex items-center justify-between"
+                          >
+                            <span className="truncate pr-1">{opt}</span>
+                            <span className="text-[10px] font-black text-slate-400 border border-slate-200 px-1.5 rounded bg-slate-50 uppercase shrink-0">{String.fromCharCode(65 + idx)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-2 mt-1 p-2.5 rounded-xl border bg-slate-50 border-slate-100 animate-fade-in">
+                        <div className="flex items-center gap-1">
+                          {selectedAnswerIndex === quizQuestions[currentQuizIndex].correctIndex ? (
+                            <span className="text-emerald-600 font-extrabold flex items-center gap-1 text-xs">🎉 Doğru! (+8 Sevgi, +5 Enerji)</span>
+                          ) : (
+                            <span className="text-rose-600 font-extrabold text-xs">❌ Yanlış! Doğru Cevap: {String.fromCharCode(65 + quizQuestions[currentQuizIndex].correctIndex)}</span>
+                          )}
+                        </div>
+                        <p className="text-xs text-slate-500 leading-relaxed italic">
+                          {quizQuestions[currentQuizIndex].explanation}
+                        </p>
+                        <div className="flex gap-1.5 mt-1.5">
+                          <button
+                            type="button"
+                            onClick={handleStartQuiz}
+                            className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs py-1.5 rounded-xl transition-colors flex items-center justify-center gap-1 shadow-sm"
+                          >
+                            Sıradaki Soru ➡️
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setCurrentQuizIndex(null); handleInteract('happy', "Sınavı başarıyla bitirdin! Harika bir beyin jimnastiğiydi. 😊"); }}
+                            className="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold text-xs py-1.5 px-3 rounded-xl transition-colors"
+                          >
+                            Kapat
+                          </button>
                         </div>
                       </div>
-                      <button
-                        onClick={markIsmAsSent}
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
-                      >
-                        <Check size={12} /> İSM'ye Gönderildi Olarak İşaretle
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-2.5 flex items-center gap-2">
-                      <CheckCircle size={14} className="text-emerald-600 shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">İSM Görevi Tamamlandı</p>
-                        <p className="text-[9px] text-emerald-700">Bugünkü Personel Hareket Listesi başarıyla iletildi.</p>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    {/* Status/Levels Bar in normal bubble view */}
+                    <div className="flex items-center gap-3 text-[10px] text-slate-400 font-bold border-b border-slate-100 pb-2 mb-0.5 justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <Heart size={11} className="text-rose-500 fill-rose-500 animate-pulse" />
+                        <span>Sevgi:</span>
+                        <div className="w-12 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-rose-500 h-full rounded-full transition-all duration-500" style={{ width: `${loveLevel}%` }} />
+                        </div>
+                        <span className="text-[10px] text-rose-600">{loveLevel}%</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Zap size={11} className="text-amber-500 fill-amber-500" />
+                        <span>Enerji:</span>
+                        <div className="w-12 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                          <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${energyLevel}%` }} />
+                        </div>
+                        <span className="text-[10px] text-amber-600">{energyLevel}%</span>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
-                  <button
-                    onClick={() => {
-                      setIsAssistantOpen(true);
-                      handleInteract('happy', "Yapay zekâ asistanımızı açtım! Sağ panelden detaylı sorularını sorabilirsin. 💬");
-                    }}
-                    className="bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
-                  >
-                    <MessageSquare size={11} /> Sohbet Başlat
-                  </button>
-                  <button
-                    onClick={() => {
-                      openNewTemplateModal();
-                      handleInteract('happy', "Harika! Yeni bir süreç tasarlama modülünü açtım. Kolay gelsin!");
-                    }}
-                    className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
-                  >
-                    <Plus size={11} /> Süreç Tasarla
-                  </button>
-                  <button
-                    onClick={showNextTip}
-                    className="bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
-                  >
-                    <HelpCircle size={11} /> Bilgi Kartı
-                  </button>
-                  <button
-                    onClick={() => {
-                      handleInteract('happy', "Süreçler tıkır tıkır işliyor! Kahveni yudumlarken sakin kalmayı unutma. ☕");
-                    }}
-                    className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
-                  >
-                    <Coffee size={11} /> Kahve Molası
-                  </button>
-                </div>
+                    <p className={`${getFontClass('bubble')} font-semibold leading-relaxed whitespace-pre-line text-slate-800`}>
+                      {bubbleText}
+                    </p>
 
-                <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-slate-50 pt-2 mt-1">
-                  <span>🤖 Sürükleyip taşıyabilirsiniz</span>
-                  <button 
-                    onClick={() => setIsVisible(false)}
-                    className="hover:text-red-500 font-medium transition-colors"
-                  >
-                    Robotu Gizle
-                  </button>
-                </div>
+                    {/* İSM Daily Report Status Panel */}
+                    <div className="border-t border-b border-slate-100 py-2.5 my-0.5">
+                      {ismStatus === 'pending' ? (
+                        <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-xl p-3 flex flex-col gap-2">
+                          <div className="flex items-start gap-2">
+                            <ShieldAlert size={15} className="text-amber-600 shrink-0 mt-0.5 animate-bounce" />
+                            <div className="flex-1">
+                              <p className="text-[10px] font-bold uppercase tracking-wider text-amber-800">Günlük İSM Görevi</p>
+                              <p className="text-[10px] text-amber-700 leading-tight">Günlük Personel Hareket Listesi'ni İl Sağlık Müdürlüğü'ne (İSM) göndermeyi unutmayın!</p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={markIsmAsSent}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold text-[10px] py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                          >
+                            <Check size={12} /> İSM'ye Gönderildi Olarak İşaretle
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl p-2.5 flex items-center gap-2">
+                          <CheckCircle size={14} className="text-emerald-600 shrink-0" />
+                          <div className="flex-1">
+                            <p className="text-[10px] font-bold text-emerald-800 uppercase tracking-wide">İSM Görevi Tamamlandı</p>
+                            <p className="text-[9px] text-emerald-700">Bugünkü Personel Hareket Listesi başarıyla iletildi.</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-1.5 pt-1">
+                      <button
+                        onClick={() => {
+                          setIsAssistantOpen(true);
+                          handleInteract('happy', "Yapay zekâ asistanımızı açtım! Sağ panelden detaylı sorularını sorabilirsin. 💬");
+                        }}
+                        className="bg-blue-50 hover:bg-blue-100 border border-blue-200 text-blue-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
+                      >
+                        <MessageSquare size={11} /> Sohbet Başlat
+                      </button>
+                      <button
+                        onClick={() => {
+                          openNewTemplateModal();
+                          handleInteract('happy', "Harika! Yeni bir süreç tasarlama modülünü açtım. Kolay gelsin!");
+                        }}
+                        className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
+                      >
+                        <Plus size={11} /> Süreç Tasarla
+                      </button>
+                      <button
+                        onClick={showNextTip}
+                        className="bg-orange-50 hover:bg-orange-100 border border-orange-200 text-orange-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
+                      >
+                        <HelpCircle size={11} /> Bilgi Kartı
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleInteract('happy', "Süreçler tıkır tıkır işliyor! Kahveni yudumlarken sakin kalmayı unutma. ☕");
+                        }}
+                        className="bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 rounded-lg py-1.5 px-2 text-[10px] font-bold transition-all flex items-center justify-center gap-1"
+                      >
+                        <Coffee size={11} /> Kahve Molası
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between items-center text-[9px] text-slate-400 border-t border-slate-50 pt-2 mt-1">
+                      <span>🤖 Sürükleyip taşıyabilirsiniz</span>
+                      <button 
+                        onClick={() => setIsVisible(false)}
+                        className="hover:text-red-500 font-medium transition-colors"
+                      >
+                        Robotu Gizle
+                      </button>
+                    </div>
+                  </>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -917,6 +1327,33 @@ export function DesktopRobot({
                     {/* Side ears/bolts */}
                     <rect x="16" y="38" width="6" height="16" rx="2" fill="#94a3b8" />
                     <rect x="78" y="38" width="6" height="16" rx="2" fill="#94a3b8" />
+
+                    {/* Costumes */}
+                    {costume === 'expert' && (
+                      <>
+                        <polygon points="32,16 50,8 68,16 50,24" fill="#1e1b4b" stroke="#312e81" strokeWidth="1" />
+                        <rect x="48" y="16" width="4" height="6" fill="#1e1b4b" />
+                        <line x1="68" y1="16" x2="72" y2="25" stroke="#eab308" strokeWidth="1" />
+                        <circle cx="72" cy="25" r="2" fill="#eab308" />
+                      </>
+                    )}
+                    {costume === 'stethoscope' && (
+                      <>
+                        <path d="M 28,68 Q 50,88 72,68" fill="none" stroke="#e11d48" strokeWidth="2.5" strokeLinecap="round" />
+                        <path d="M 50,78 L 50,86" fill="none" stroke="#e11d48" strokeWidth="2.5" />
+                        <circle cx="50" cy="88" r="4" fill="#f43f5e" stroke="#be123c" strokeWidth="1" />
+                      </>
+                    )}
+                    {costume === 'glasses' && (
+                      <>
+                        <circle cx="39" cy="43" r="10" fill="none" stroke="#eab308" strokeWidth="2.5" />
+                        <circle cx="61" cy="43" r="10" fill="none" stroke="#eab308" strokeWidth="2.5" />
+                        <line x1="49" y1="43" x2="51" y2="43" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" />
+                        {/* Temple pieces */}
+                        <line x1="29" y1="43" x2="22" y2="40" stroke="#eab308" strokeWidth="2" />
+                        <line x1="71" y1="43" x2="78" y2="40" stroke="#eab308" strokeWidth="2" />
+                      </>
+                    )}
                   </svg>
 
                   {/* Little waving arm */}
@@ -1033,6 +1470,91 @@ export function DesktopRobot({
                   {state === 'idle' ? 'Sakin' : state === 'happy' ? 'Mutlu' : state === 'thinking' ? 'Düşün' : 'Selam'}
                 </button>
               ))}
+            </div>
+
+            <div className="h-px bg-slate-100 my-1"></div>
+
+            {/* Quiz Game Trigger */}
+            <button
+              onClick={() => {
+                handleStartQuiz();
+                setContextMenu(null);
+              }}
+              className="w-full text-left px-3.5 py-2.5 hover:bg-amber-50 text-amber-950 hover:text-amber-800 transition-colors flex items-center gap-2 font-bold"
+            >
+              <Award size={14} className="text-amber-500 animate-bounce" />
+              <span>Mevzuat Bilgi Sınavı 🏆</span>
+            </button>
+
+            <div className="h-px bg-slate-100 my-1"></div>
+
+            {/* Custom Interactive Selectors inside Context Menu */}
+            <div className="px-3.5 py-1.5 flex flex-col gap-1 text-[10px]">
+              <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🎭 Kostüm Değiştir</span>
+              <div className="grid grid-cols-4 gap-1">
+                {[
+                  { id: 'classic', label: 'Mavi' },
+                  { id: 'expert', label: 'Uzman' },
+                  { id: 'stethoscope', label: 'Hekim' },
+                  { id: 'glasses', label: 'Tarz' }
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => { setCostume(item.id as any); playBeep(520, 80); }}
+                    className={`px-1 py-1 rounded text-center text-[9px] font-bold border transition-all ${costume === item.id ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-3.5 py-1.5 flex flex-col gap-1 text-[10px]">
+              <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">🔍 Metin Boyutu</span>
+              <div className="grid grid-cols-3 gap-1">
+                {[
+                  { id: 'normal', label: 'Normal' },
+                  { id: 'large', label: 'Büyük' },
+                  { id: 'xlarge', label: 'X-Büyük' }
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => { setFontSizeMode(item.id as any); playBeep(520, 80); }}
+                    className={`px-1 py-1 rounded text-center text-[9px] font-bold border transition-all ${fontSizeMode === item.id ? 'bg-indigo-600 text-white border-indigo-500 shadow-sm' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="px-3.5 py-1.5 flex flex-col gap-1 text-[10px]">
+              <span className="text-slate-400 font-bold uppercase tracking-wider block mb-0.5">❤️ Pet Bakımı (Besleme & Sevgi)</span>
+              <div className="grid grid-cols-3 gap-1">
+                <button
+                  type="button"
+                  onClick={() => { handlePetAction('stroke'); setContextMenu(null); }}
+                  className="px-1 py-1.5 bg-rose-50 border border-rose-200 hover:bg-rose-100 text-rose-700 rounded text-center text-[9px] font-bold transition-all flex items-center justify-center gap-0.5"
+                >
+                  <span>Okşa 👋</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handlePetAction('feed_doc'); setContextMenu(null); }}
+                  className="px-1 py-1.5 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 text-emerald-700 rounded text-center text-[9px] font-bold transition-all flex items-center justify-center gap-0.5"
+                >
+                  <span>Genelge 📑</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { handlePetAction('give_coffee'); setContextMenu(null); }}
+                  className="px-1 py-1.5 bg-amber-50 border border-amber-200 hover:bg-amber-100 text-amber-700 rounded text-center text-[9px] font-bold transition-all flex items-center justify-center gap-0.5"
+                >
+                  <span>Kahve ☕</span>
+                </button>
+              </div>
             </div>
 
             <div className="h-px bg-slate-100 my-1"></div>
