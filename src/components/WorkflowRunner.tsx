@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ActiveWorkflow } from '../types';
+import React, { useState, useEffect } from 'react';
+import { ActiveWorkflow, ActiveStep } from '../types';
 import { CheckCircle, Circle, Info, HelpCircle, AlertTriangle, FileText, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -8,18 +8,40 @@ interface WorkflowRunnerProps {
   onUpdateStep: (stepId: string, isCompleted: boolean) => void;
   onComplete: () => void;
   onHelpRequested: (helpText: string) => void;
+  onStepSelect?: (step: ActiveStep | null) => void;
 }
 
-export function WorkflowRunner({ workflow, onUpdateStep, onComplete, onHelpRequested }: WorkflowRunnerProps) {
+export function WorkflowRunner({ 
+  workflow, 
+  onUpdateStep, 
+  onComplete, 
+  onHelpRequested,
+  onStepSelect
+}: WorkflowRunnerProps) {
   const [expandedStep, setExpandedStep] = useState<string | null>(null);
   const [generatedDraft, setGeneratedDraft] = useState<string | null>(null);
   const [recentTip, setRecentTip] = useState<{ id: string; tip: string } | null>(null);
+
+  useEffect(() => {
+    if (onStepSelect) {
+      if (expandedStep) {
+        const step = workflow.steps.find(s => s.id === expandedStep);
+        if (step) {
+          onStepSelect(step);
+          return;
+        }
+      }
+      // Fallback to first uncompleted step as active context
+      const firstUncompleted = workflow.steps.find(s => !s.isCompleted);
+      onStepSelect(firstUncompleted || null);
+    }
+  }, [expandedStep, workflow.steps, onStepSelect]);
 
   const getTipForStep = (title: string) => {
     if (title.includes('Evrak')) return "Evrakların asıllarının görülüp, fotokopilerinin 'Aslı Gibidir' onayının yapıldığından emin olun.";
     if (title.includes('Sözleşme') || title.includes('İç Form')) return "Sözleşmelerin tüm sayfalarının memur ve yetkili amir tarafından paraflanması zorunludur.";
     if (title.includes('Banka')) return "SGK bildirgesindeki hesap bilgileriyle mutemetliğe verilen IBAN'ın aynı olması işlemleri hızlandırır.";
-    if (title.includes('Sistem') || title.includes('Yetkilendirme')) return "ÇKYS'ye başlama düşülmeden maaş hesaplaması tetiklenmez. Aynı gün girilmesi esastır.";
+    if (title.includes('Sistem') || title.includes('Yetkilendirme')) return "Yeni EKİP sistemine (eski ÇKYS) başlama kaydı düşülmeden maaş hesaplaması tetiklenmez. Aynı gün girilmesi esastır.";
     if (title.includes('DYS')) return "DYS üzerinden yazılan başlama yazılarının sayı numarası tarihi ile kişinin başlama günü uyumlu olmalıdır.";
     if (title.includes('SGK')) return "İşe giriş bildirgesi geç verilirse (istisnai haller hariç) asgari ücretin 1 katından başlayan idari para cezası uygulanır.";
     if (title.includes('Maaş')) return "Personelin aile yardımı ve asgari geçim bilgilerini kanıtlayıcı belgelerle birlikte iletmeyi unutmayın.";

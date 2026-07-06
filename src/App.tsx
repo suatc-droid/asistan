@@ -3,8 +3,9 @@ import { Assistant } from './components/Assistant';
 import { WorkflowRunner } from './components/WorkflowRunner';
 import { DesktopRobot } from './components/DesktopRobot';
 import { defaultWorkflows, defaultReminders, mockStats, mockOngoingWorkflows } from './data/mockData';
-import { ActiveWorkflow, WorkflowTemplate } from './types';
-import { Plus, Bell, Clock, Calendar, CheckSquare, PlayCircle, AlertCircle, CheckCircle, Activity, ShieldCheck, Users, FileText, AlertTriangle, X, Download, Pencil, Trash2, Monitor, Laptop, Smartphone, Info } from 'lucide-react';
+import { ActiveWorkflow, WorkflowTemplate, ActiveStep } from './types';
+import { Plus, Bell, Clock, Calendar, CheckSquare, PlayCircle, AlertCircle, CheckCircle, Activity, ShieldCheck, Users, FileText, AlertTriangle, X, Download, Pencil, Trash2, Monitor, Laptop, Smartphone, Info, ExternalLink, Scale, Menu } from 'lucide-react';
+import { MevzuatBankasi } from './components/MevzuatBankasi';
 // @ts-ignore
 import mammoth from 'mammoth';
 
@@ -129,9 +130,19 @@ EKLER:
 
 function App() {
   const [activeWorkflow, setActiveWorkflow] = useState<ActiveWorkflow | null>(null);
+  const [selectedStep, setSelectedStep] = useState<ActiveStep | null>(null);
   const [isAssistantOpen, setIsAssistantOpen] = useState(true);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'dashboard' | 'library' | 'deadlines' | 'all-workflows' | 'desktop-app'>('dashboard');
+  const [isEkipModalOpen, setIsEkipModalOpen] = useState(false);
+  const [activeView, setActiveView] = useState<'dashboard' | 'library' | 'deadlines' | 'all-workflows' | 'desktop-app' | 'mevzuat'>('dashboard');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // Clear selectedStep if activeWorkflow is removed
+  useEffect(() => {
+    if (!activeWorkflow) {
+      setSelectedStep(null);
+    }
+  }, [activeWorkflow]);
   
   // PWA Support state
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -190,8 +201,35 @@ function App() {
     return initialTemplates;
   });
   const [editingTemplate, setEditingTemplate] = useState<TemplateDoc | null>(null);
-  const [workflows, setWorkflows] = useState<WorkflowTemplate[]>(defaultWorkflows);
+  const [workflows, setWorkflows] = useState<WorkflowTemplate[]>(() => {
+    try {
+      const saved = localStorage.getItem('isakis_workflows_v3');
+      if (saved) return JSON.parse(saved);
+      
+      // If v3 is not found, force defaultWorkflows to load the newly standardized steps
+      localStorage.setItem('isakis_workflows_v3', JSON.stringify(defaultWorkflows));
+    } catch (e) {
+      console.error(e);
+    }
+    return defaultWorkflows;
+  });
   const [editingWorkflow, setEditingWorkflow] = useState<WorkflowTemplate | null>(null);
+
+  const [workflowToDelete, setWorkflowToDelete] = useState<WorkflowTemplate | null>(null);
+
+  const confirmDeleteWorkflow = () => {
+    if (!workflowToDelete) return;
+    setWorkflows(prev => {
+      const updated = prev.filter(w => w.id !== workflowToDelete.id);
+      try {
+        localStorage.setItem('isakis_workflows_v3', JSON.stringify(updated));
+      } catch (e) {
+        console.error(e);
+      }
+      return updated;
+    });
+    setWorkflowToDelete(null);
+  };
 
   // Stateful reminders with localStorage persistence
   const [reminders, setReminders] = useState<any[]>(() => {
@@ -485,7 +523,15 @@ Konu : [Konu]
           criticalInfo: newWfCritical.split('\n').filter(line => line.trim() !== ''),
           steps: stepsWithIds
         };
-        setWorkflows(prev => prev.map(w => w.id === editingWorkflow.id ? updatedWf : w));
+        setWorkflows(prev => {
+          const updated = prev.map(w => w.id === editingWorkflow.id ? updatedWf : w);
+          try {
+            localStorage.setItem('isakis_workflows_v3', JSON.stringify(updated));
+          } catch (e) {
+            console.error(e);
+          }
+          return updated;
+        });
         setEditingWorkflow(null);
         setIsTemplateModalOpen(false);
         alert('İş akışı süreci başarıyla güncellendi!');
@@ -500,7 +546,15 @@ Konu : [Konu]
           steps: stepsWithIds
         };
 
-        setWorkflows(prev => [...prev, newWf]);
+        setWorkflows(prev => {
+          const updated = [...prev, newWf];
+          try {
+            localStorage.setItem('isakis_workflows_v3', JSON.stringify(updated));
+          } catch (e) {
+            console.error(e);
+          }
+          return updated;
+        });
         setIsTemplateModalOpen(false);
         alert('Yeni iş akışı süreci başarıyla oluşturuldu ve kütüphaneye eklendi!');
       }
@@ -811,6 +865,13 @@ Konu : [Konu]
       {/* Top Navigation Bar */}
       <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-4 sm:px-8 shrink-0 z-10">
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2 -ml-2 text-slate-600 hover:text-slate-950 md:hidden hover:bg-slate-100 rounded-xl transition-all"
+            title="Menüyü Aç"
+          >
+            {isMobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">I</div>
           <h1 className="text-xl font-bold text-slate-800 tracking-tight">İşAkış Pro <span className="text-blue-600 font-medium text-sm ml-2 hidden sm:inline">Kurumsal Asistan</span></h1>
         </div>
@@ -827,7 +888,75 @@ Konu : [Konu]
         </div>
       </header>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
+        {/* Mobile Navigation Drawer */}
+        {isMobileMenuOpen && (
+          <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm z-[80] md:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+            <div 
+              className="w-72 bg-white h-full shadow-2xl p-6 flex flex-col gap-6 animate-in slide-in-from-left duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">I</div>
+                  <span className="font-bold text-slate-800 text-sm">İşAkış Pro Menü</span>
+                </div>
+                <button 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <nav className="flex-1 space-y-2 overflow-y-auto">
+                <button 
+                  onClick={() => { setActiveView('dashboard'); setActiveWorkflow(null); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'dashboard' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                >
+                  <Activity size={18} />
+                  <span>Gösterge Paneli</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveView('deadlines'); setActiveWorkflow(null); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'deadlines' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                >
+                  <Calendar size={18} />
+                  <span>Yasal Süre Takibi</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveView('all-workflows'); setActiveWorkflow(null); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'all-workflows' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                >
+                  <CheckSquare size={18} />
+                  <span>Tüm Süreçler</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveView('library'); setActiveWorkflow(null); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'library' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                >
+                  <FileText size={18} />
+                  <span>Belge Kütüphanesi</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveView('mevzuat'); setActiveWorkflow(null); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'mevzuat' && !activeWorkflow ? 'bg-blue-50 text-blue-750 font-black border border-indigo-200 bg-indigo-50/50' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                >
+                  <Scale size={18} className="text-indigo-500 animate-pulse" />
+                  <span className="font-extrabold text-indigo-900">Mevzuat Bilgi Bankası</span>
+                </button>
+                <button 
+                  onClick={() => { setActiveView('desktop-app'); setActiveWorkflow(null); setIsMobileMenuOpen(false); }}
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'desktop-app' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+                >
+                  <Monitor size={18} className="text-indigo-500" />
+                  <span>Masaüstü Uygulaması</span>
+                </button>
+              </nav>
+            </div>
+          </div>
+        )}
+
         {/* Sidebar */}
         <div className="w-64 bg-white border-r border-slate-200 text-slate-800 flex-col hidden md:flex shrink-0 z-10 shadow-sm">
           <div className="p-6">
@@ -863,6 +992,13 @@ Konu : [Konu]
                 <span>Belge Kütüphanesi</span>
               </button>
               <button 
+                onClick={() => { setActiveView('mevzuat'); setActiveWorkflow(null); }}
+                className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'mevzuat' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
+              >
+                <Scale size={18} className="text-indigo-500" />
+                <span>Mevzuat Bilgi Bankası</span>
+              </button>
+              <button 
                 onClick={() => { setActiveView('desktop-app'); setActiveWorkflow(null); }}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl font-medium transition-all text-sm ${activeView === 'desktop-app' && !activeWorkflow ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'}`}
               >
@@ -892,6 +1028,7 @@ Konu : [Konu]
                 onUpdateStep={updateStep}
                 onComplete={() => completeWorkflow(activeWorkflow.id)}
                 onHelpRequested={handleHelpRequested}
+                onStepSelect={setSelectedStep}
               />
             </div>
           ) : activeView === 'dashboard' ? (
@@ -1030,6 +1167,37 @@ Konu : [Konu]
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* EKİP Bilgi ve Mevzuat Kartı (Kompakt Banner) */}
+                  <div className="bg-gradient-to-r from-teal-50 via-white to-blue-50 rounded-2xl p-4 md:p-5 border border-teal-100 shadow-sm relative overflow-hidden flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="absolute top-0 right-0 w-24 h-24 bg-teal-100/20 rounded-full blur-xl pointer-events-none"></div>
+                    <div className="flex items-center gap-3 relative z-10">
+                      <div className="w-10 h-10 bg-teal-600/10 rounded-xl flex items-center justify-center border border-teal-500/20 text-teal-600 shadow-sm shrink-0">
+                        <Activity size={18} className="animate-pulse" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="bg-teal-600 text-white font-extrabold text-[8px] px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            YENİ SİSTEM GÜNCELLEMESİ
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-semibold">ÇKYS 👉 EKİP</span>
+                        </div>
+                        <h3 className="font-bold text-slate-800 text-sm mt-0.5">
+                          Entegre Kurumsal İşlem Platformu (EKİP) Kılavuzu
+                        </h3>
+                        <p className="text-[11px] text-slate-500 hidden sm:block mt-0.5">
+                          Bakanlığın yeni EKİP sistemine dair mevzuat hatırlatmaları ve hızlı giriş bağlantıları.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setIsEkipModalOpen(true)}
+                      className="bg-teal-600 hover:bg-teal-700 text-white text-xs font-extrabold px-4 py-2.5 rounded-xl flex items-center justify-center gap-1.5 shadow-sm transition-all shrink-0 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                    >
+                      <span>Mevzuat ve Linkleri Göster</span>
+                      <ExternalLink size={12} />
+                    </button>
                   </div>
 
                   {/* Smart Calendar / Legal Tracker */}
@@ -1317,16 +1485,28 @@ Konu : [Konu]
                         <PlayCircle size={20} className="text-blue-500 opacity-0 -ml-6 group-hover:opacity-100 group-hover:ml-0 transition-all duration-300 shrink-0" />
                         {wf.title}
                       </h4>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          openEditWorkflowModal(wf);
-                        }}
-                        className="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
-                        title="Süreci Düzenle"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openEditWorkflowModal(wf);
+                          }}
+                          className="text-slate-400 hover:text-blue-600 p-1.5 rounded-lg hover:bg-slate-50 transition-colors shrink-0"
+                          title="Süreci Düzenle"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setWorkflowToDelete(wf);
+                          }}
+                          className="text-slate-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition-colors shrink-0"
+                          title="Süreci Sil"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
                     <p className="text-sm text-slate-500 mb-4 flex-1">{wf.description}</p>
                     <div className="text-xs font-bold text-slate-400 flex items-center justify-between mt-auto pt-4 border-t border-slate-100">
@@ -1486,6 +1666,8 @@ Konu : [Konu]
                 )}
               </div>
             </div>
+          ) : activeView === 'mevzuat' ? (
+            <MevzuatBankasi />
           ) : null}
         </main>
       </div>
@@ -1504,6 +1686,7 @@ Konu : [Konu]
         openNewTemplateModal={openNewTemplateModal}
         workflows={workflows}
         onStartWorkflow={startWorkflow}
+        activeStep={selectedStep}
       />
 
       {/* Template Modal */}
@@ -1622,7 +1805,7 @@ Konu : [Konu]
                             <p className="text-xs font-bold text-slate-400">Adım #{index + 1}</p>
                             <input
                               type="text"
-                              placeholder="Adım Başlığı (Örn: ÇKYS Takibi ve Kontrolü)"
+                              placeholder="Adım Başlığı (Örn: EKİP Sistemi Girişi ve Kontrolü)"
                               value={step.title}
                               onChange={(e) => {
                                 const updated = [...newWfSteps];
@@ -2080,6 +2263,166 @@ Unvan    :                                                 Unvan    :
                 className="px-5 py-2.5 text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-colors"
               >
                 Değişiklikleri Kaydet
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* EKİP Detay ve Mevzuat Açılır Penceresi (Modal) */}
+      {isEkipModalOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[100] p-4 overflow-y-auto"
+          onClick={() => setIsEkipModalOpen(false)}
+        >
+          <div 
+            className="bg-gradient-to-b from-white to-slate-50/80 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden relative border border-teal-100/50 my-8 transform transition-all animate-in fade-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Dekoratif Gradient */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-teal-100/20 rounded-full blur-3xl pointer-events-none"></div>
+            <div className="absolute bottom-0 left-0 w-32 h-32 bg-blue-100/20 rounded-full blur-2xl pointer-events-none"></div>
+
+            <div className="p-6 md:p-8 relative z-10">
+              {/* Üst Başlık ve Kapat Butonu */}
+              <div className="flex items-start justify-between gap-4 mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-teal-600/10 rounded-2xl flex items-center justify-center border border-teal-500/20 text-teal-600 shadow-sm shrink-0">
+                    <Activity size={24} className="animate-pulse" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="bg-teal-600 text-white font-extrabold text-[9px] px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                        BAKANLIK GÜNCELLEMESİ
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-mono">ÇKYS 👉 EKİP</span>
+                    </div>
+                    <h3 className="font-black text-slate-800 text-lg md:text-xl mt-1">
+                      EKİP Portalı ve Mevzuat Bilgilendirmesi
+                    </h3>
+                  </div>
+                </div>
+                <button 
+                  onClick={() => setIsEkipModalOpen(false)}
+                  className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 p-2.5 rounded-full transition-all cursor-pointer"
+                  title="Kapat"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Genel Açıklama */}
+              <div className="bg-teal-50/50 border border-teal-100/60 rounded-2xl p-4 mb-6">
+                <p className="text-xs md:text-sm text-slate-700 leading-relaxed">
+                  Sağlık Bakanlığı'nın eski ÇKYS/KYS sistemlerinin yerini alan <strong>EKİP (Entegre Kurumsal İşlem Platformu)</strong>; tüm insan kaynakları, tescil, atama, sözleşme, özlük ve hizmet içi eğitim yönetimini tek bir çatıda birleştiren güncel platformdur.
+                </p>
+              </div>
+
+              {/* İki Sütunlu Detay Alanı */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                {/* Sol Sütun - Mevzuat */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                  <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                    ⚖️ Önemli Mevzuat Hatırlatmaları
+                  </h4>
+                  <ul className="text-xs text-slate-600 space-y-3 list-disc pl-4 leading-relaxed">
+                    <li>
+                      <strong>Tescil Zorunluluğu:</strong> Göreve başlama, ayrılış ve tescil işlemleri artık tamamen EKİP sistemi üzerinden yürütülmektedir.
+                    </li>
+                    <li>
+                      <strong>Maaş ve SGK Entegrasyonu:</strong> EKİP sistemine başlama tarihi girilmeyen personelin aktiflik durumu oluşmayacağından maaş hesaplama ve SGK bildirim süreçleri başlatılamaz.
+                    </li>
+                    <li>
+                      <strong>Doğruluk Sorumluluğu:</strong> EKİP'e girilen bilgilerin doğruluğundan işlemi gerçekleştiren birim sorumludur.
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Sağ Sütun - Bağlantılar */}
+                <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 flex items-center gap-1.5 border-b border-slate-100 pb-2">
+                      🔗 EKİP Resmî Hızlı Erişim Linkleri
+                    </h4>
+                    <p className="text-xs text-slate-500 mt-2 leading-relaxed">
+                      EKİP portalına doğrudan erişim, kullanım kılavuzları ve resmi destek talebi oluşturma bağlantıları:
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5 mt-4">
+                    <a 
+                      href="https://ekip.saglik.gov.tr" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white text-xs font-bold px-4 py-3 rounded-xl flex items-center justify-between shadow-md transition-all hover:scale-[1.01]"
+                    >
+                      <span>🌐 EKİP Portal Girişi</span>
+                      <ExternalLink size={14} />
+                    </a>
+                    <a 
+                      href="https://ekipdestek.saglik.gov.tr" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold px-4 py-3 rounded-xl flex items-center justify-between transition-all"
+                    >
+                      <span>🛠️ EKİP Destek ve Kılavuzlar</span>
+                      <ExternalLink size={14} className="text-slate-400" />
+                    </a>
+                    <a 
+                      href="https://ortakgiris.saglik.gov.tr" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold px-4 py-3 rounded-xl flex items-center justify-between transition-all"
+                    >
+                      <span>🔑 Sağlık Bakanlığı Ortak Giriş</span>
+                      <ExternalLink size={14} className="text-slate-400" />
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              {/* Alt Bilgi & Kapatma Paneli */}
+              <div className="flex items-center justify-between gap-4 pt-4 border-t border-slate-100 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-medium">
+                  © Türkiye Cumhuriyeti Sağlık Bakanlığı Entegre Sistem Entegrasyonu Bilgilendirmesi
+                </span>
+                <button 
+                  onClick={() => setIsEkipModalOpen(false)}
+                  className="px-6 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-xl transition-all cursor-pointer shadow-sm hover:scale-[1.02]"
+                >
+                  Anladım, Kapat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Workflow Delete Confirmation Modal */}
+      {workflowToDelete && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center z-[150] p-4">
+          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-200 transform transition-all animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-6 md:p-8 space-y-4 text-center">
+              <div className="w-14 h-14 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto border border-red-100">
+                <Trash2 size={24} />
+              </div>
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-black text-slate-800">Süreci Sil</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  <strong>"{workflowToDelete.title}"</strong> isimli süreci tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz.
+                </p>
+              </div>
+            </div>
+            <div className="p-6 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-3">
+              <button
+                onClick={() => setWorkflowToDelete(null)}
+                className="px-4 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-200 bg-slate-100 rounded-xl transition-all cursor-pointer"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={confirmDeleteWorkflow}
+                className="px-5 py-2.5 text-xs font-bold text-white bg-red-600 hover:bg-red-700 rounded-xl transition-all shadow-md shadow-red-200 cursor-pointer"
+              >
+                Evet, Sil
               </button>
             </div>
           </div>

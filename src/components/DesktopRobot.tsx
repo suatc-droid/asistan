@@ -19,7 +19,7 @@ import {
   CheckCircle,
   ShieldAlert
 } from 'lucide-react';
-import { WorkflowTemplate } from '../types';
+import { WorkflowTemplate, ActiveStep } from '../types';
 
 interface DesktopRobotProps {
   setIsAssistantOpen: (open: boolean) => void;
@@ -27,6 +27,7 @@ interface DesktopRobotProps {
   workflows: WorkflowTemplate[];
   onStartWorkflow: (wf: WorkflowTemplate) => void;
   isStandalone?: boolean;
+  activeStep?: ActiveStep | null;
 }
 
 type RobotState = 'idle' | 'happy' | 'thinking' | 'waving' | 'sleepy';
@@ -36,7 +37,8 @@ export function DesktopRobot({
   openNewTemplateModal, 
   workflows, 
   onStartWorkflow,
-  isStandalone = false
+  isStandalone = false,
+  activeStep = null
 }: DesktopRobotProps) {
   const constraintsRef = useRef<HTMLDivElement>(null);
   const [isVisible, setIsVisible] = useState(true);
@@ -64,7 +66,7 @@ export function DesktopRobot({
   });
 
   const tips = [
-    "Uzman Hekim göreve başlamalarında ÇKYS kaydı düştükten sonra 15 gün içinde tebligat yapılmalıdır.",
+    "Uzman Hekim göreve başlamalarında yeni EKİP (Entegre Kurumsal İşlem Platformu) kaydı düştükten sonra 15 gün içinde tebligat yapılmalıdır.",
     "4/B Sözleşmeli personelin işe başlama evraklarında Güvenlik Soruşturması ve Arşiv Araştırması belgesi kritik önem taşır (7315 Sayılı Güvenlik Soruşturması Kanunu).",
     "Sürekli işçi girişlerinde SGK işe giriş bildirgesinin en geç işe başlamadan 1 gün önce yapılması yasal zorunluluktur (5510 Sayılı Kanun Md. 8).",
     "KVKK uyarınca, personelin sağlık raporu ve sabıka kaydı gibi hassas kişisel verileri kilitli dolaplarda saklanmalı ve yetkisiz erişim engellenmelidir.",
@@ -82,7 +84,7 @@ export function DesktopRobot({
     "4/B sözleşmeli personelin yıllık izin hakları bir sonraki yıla devredilemez, ilgili takvim yılı içinde kullanılmayan izinler yanar (Sözleşmeli Personel Çalıştırılmasına İlişkin Esaslar).",
     "Becayiş (Karşılıklı yer değiştirme), aynı unvan ve branştaki personellerin karşılıklı anlaşarak yer değiştirmesidir ve İl Sağlık Müdürlüğü onayıyla gerçekleştirilir (657 DMK Md. 73).",
     "Geçici görevlendirme süresi, bir takvim yılı içinde her ne suretle olursa olsun toplamda 6 ayı geçemez (Sağlık Bakanlığı Atama ve Yer Değiştirme Yönetmeliği).",
-    "Personelin ad soyad değişikliği, evlilik veya boşanma durumlarında nüfus kayıt örneği ve dilekçesi alınarak ÇKYS üzerinde güncellenmelidir.",
+    "Personelin ad soyad değişikliği, evlilik veya boşanma durumlarında nüfus kayıt örneği ve dilekçesi alınarak EKİP (eski ÇKYS) üzerinde güncellenmelidir.",
     "Sendika üyelik formu veya çekilme formu alındığında, maaş mutemetliğine 3 iş günü içinde bildirilerek kesinti durumu güncellenmelidir (4688 Sayılı Kanun).",
     "Mal bildirimi beyannamesi, sonu (0) ve (5) ile biten yıllarda en geç Şubat ayı sonuna kadar tüm devlet memurları tarafından yenilenmelidir (3628 Sayılı Kanun Md. 6).",
     "Her gün mesai bitiminden önce Günlük Personel Hareket Listesi mutlaka İl Sağlık Müdürlüğü (İSM) İnsan Kaynakları Şubesi'ne gönderilmelidir.",
@@ -97,6 +99,68 @@ export function DesktopRobot({
     "Aylıktan kesme cezası kapsamında, memurun brüt aylığının 1/30 ile 1/8 arasında kesinti yapılır. Tebliğ tarihinden itibaren 15 gün içinde itiraz edilmezse ceza kesinleşir (657 DMK Md. 125/C).",
     "Hizmet süresi 1 yıldan 10 yıla kadar olan sağlık personeli ve memurların yıllık izin süresi 20 gün, 10 yıldan fazla olanların ise 30 gündür (657 DMK Md. 102)."
   ];
+
+  const getProactiveMevzuatTip = (step: ActiveStep) => {
+    const title = step.title.toLowerCase();
+    
+    if (title.includes('evrak') || title.includes('belge') || title.includes('diploma') || title.includes('adli sicil')) {
+      return `📌 GÖREVE BAŞLAMA EVRAKLARI (Mevzuat Hatırlatması):\n\n657 DMK Madde 48 uyarınca memuriyete girişte diploma aslı veya onaylı sureti, adli sicil kaydı ve sağlık kurulu raporu şarttır. Evrak fotokopilerinin üzerine 'Aslı Görülmüştür' kaşesi vurulmalı ve paraf atılmalıdır.`;
+    }
+    if (title.includes('sözleşme') || title.includes('hizmet sözleşmesi')) {
+      return `✍️ HİZMET SÖZLEŞMESİ (Mevzuat Hatırlatması):\n\nSözleşmeli Personel Esasları Madde 5 gereğince, sözleşmeler her mali yıl için ayrı düzenlenir. Sözleşmenin tüm sayfaları hem personel hem de müdürlük yetkilisi tarafından imzalanmalı ve birer nüsha taraflarda kalmalıdır.`;
+    }
+    if (title.includes('sgk') || title.includes('sigorta') || title.includes('işe giriş')) {
+      return `🚨 SGK İŞE GİRİŞ BİLDİRGESİ (Yasal Zorunluluk):\n\n5510 Sayılı Kanun Madde 8 gereği, 4/B sözleşmeli personelin işe giriş bildirgesi en geç göreve başlamasından bir gün önce SGK sistemine girilmelidir. Geç bildirim durumunda asgari ücret tutarında idari para cezası uygulanır!`;
+    }
+    if (title.includes('banka') || title.includes('iban') || title.includes('maaş') || title.includes('hesap')) {
+      return `💳 MAAŞ VE BANKA İŞLEMLERİ (Mevzuat Hatırlatması):\n\n657 DMK Madde 164 uyarınca devlet memurlarına maaşlar her ayın 15'inde peşin ödenir. Personelin göreve başlama tarihi ay ortasındaysa, takip eden ayın 15'inde geriye dönük kıst maaş (günlük) hesabı yapılarak ödeme listesine eklenmelidir.`;
+    }
+    if (title.includes('sistem') || title.includes('ekip') || title.includes('çkys') || title.includes('ortak') || title.includes('kayıt')) {
+      return `💻 EKİP SİSTEMİ VERİ GİRİŞİ (Sistem Bildirimi):\n\nSağlık Bakanlığı personellerinin atama ve işe başlama onayları artık yeni EKİP (Entegre Kurumsal İşlem Platformu - eski ÇKYS) üzerinden yapılmaktadır. EKİP sistemi başlama tarihi girilmeden personelin aktiflik durumu tetiklenmez ve maaş işlemleri başlatılamaz.`;
+    }
+    if (title.includes('dys') || title.includes('üst yazı') || title.includes('yazışma') || title.includes('resmi yazı')) {
+      return `✉️ DYS ÜST YAZI HAZIRLAMA (Resmî Yazışma Kuralları):\n\nResmî Yazışma Kuralları Yönetmeliği uyarınca, göreve başlama üst yazıları DYS (Doküman Yönetim Sistemi) üzerinden elektronik imzalı olarak İl Sağlık Müdürlüğü'ne iletilir. Sayı numarası ve tarih otomatik üretilir.`;
+    }
+    if (title.includes('etik') || title.includes('taahhütname') || title.includes('etik sözleşmesi')) {
+      return `⚖️ ETİK SÖZLEŞMESİ & TAAHHÜT (Mevzuat Hatırlatması):\n\nKamu Görevlileri Etik Davranış İlkeleri Yönetmeliği gereği, göreve başlayan her personelden ilk hafta içerisinde 'Kamu Görevlileri Etik Sözleşmesi' belgesi imzalı olarak alınmalı ve şahsi özlük dosyasına konulmalıdır.`;
+    }
+    if (title.includes('oryantasyon') || title.includes('eğitim') || title.includes('uyum')) {
+      return `🎯 ADAYLIK VE ORYANTASYON SÜRECİ (DMK Madde 54):\n\nAday memurluk süresi 1 yıldan az 2 yıldan çok olamaz. Bu süreçte adayın temel eğitim, hazırlayıcı eğitim ve staj eğitimlerini başarıyla tamamlaması şarttır. Oryantasyon programı süreci kolaylaştırır.`;
+    }
+    
+    return `💡 ADIM İPUCU [${step.title}]:\n\n${step.description}\n\nYasal Mevzuat: ${step.helpText}`;
+  };
+
+  const activeStepId = activeStep?.id;
+  const activeStepTitle = activeStep?.title;
+
+  // Proactive context-aware Mevzuat İpucu notification
+  useEffect(() => {
+    if (activeStep && !isMinimized && isVisible) {
+      // Simulate analysis
+      setRobotState('thinking');
+      playBeep(520, 80);
+      
+      const timer = setTimeout(() => {
+        setRobotState('happy');
+        const tipText = getProactiveMevzuatTip(activeStep);
+        setBubbleText(tipText);
+        setShowBubble(true);
+        // Play a cheerful double-beep
+        playBeep(660, 80);
+        setTimeout(() => playBeep(880, 100), 80);
+        
+        // Reset state to idle after some time
+        const idleTimer = setTimeout(() => {
+          setRobotState('idle');
+        }, 3500);
+        
+        return () => clearTimeout(idleTimer);
+      }, 800); // 800ms thinking delay
+      
+      return () => clearTimeout(timer);
+    }
+  }, [activeStepId, activeStepTitle, isMinimized, isVisible]);
 
   // Auto show a tip or wave occasionally
   useEffect(() => {
