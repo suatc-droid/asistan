@@ -39,6 +39,15 @@ function createMainWindow() {
   // Load local express server
   mainWindow.loadURL('http://localhost:3000');
 
+  // Intercept window.open calls from React (such as view=mascot-only) and route them to our custom frameless transparent window
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.includes('view=mascot-only')) {
+      createMascotWindow();
+      return { action: 'deny' };
+    }
+    return { action: 'allow' };
+  });
+
   // Retry on connection/load failure (e.g. if express is still starting up)
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     if (validatedURL.startsWith('http://localhost:3000')) {

@@ -148,11 +148,11 @@ function App() {
   useEffect(() => {
     const isMascotOnly = typeof window !== 'undefined' && window.location.search.includes('view=mascot-only');
     if (isMascotOnly) {
-      document.body.style.backgroundColor = 'transparent';
-      document.documentElement.style.backgroundColor = 'transparent';
+      document.body.style.setProperty('background-color', 'transparent', 'important');
+      document.documentElement.style.setProperty('background-color', 'transparent', 'important');
       const rootEl = document.getElementById('root');
       if (rootEl) {
-        rootEl.style.backgroundColor = 'transparent';
+        rootEl.style.setProperty('background-color', 'transparent', 'important');
       }
     }
   }, []);
