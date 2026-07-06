@@ -184,3 +184,22 @@ app.on('will-quit', () => {
 ipcMain.on('open-mascot-widget', () => {
   createMascotWindow();
 });
+
+ipcMain.on('resize-mascot-window', (event, { width, height }) => {
+  if (mascotWindow) {
+    try {
+      const bounds = mascotWindow.getBounds();
+      // Calculate new x, y to anchor to bottom right corner of its previous state
+      const newX = bounds.x + bounds.width - width;
+      const newY = bounds.y + bounds.height - height;
+      mascotWindow.setBounds({
+        x: Math.round(newX),
+        y: Math.round(newY),
+        width: Math.round(width),
+        height: Math.round(height)
+      });
+    } catch (err) {
+      console.error('Failed to set bounds on mascot window:', err);
+    }
+  }
+});

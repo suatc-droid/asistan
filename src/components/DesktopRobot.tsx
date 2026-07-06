@@ -162,6 +162,35 @@ export function DesktopRobot({
     }
   }, [activeStepId, activeStepTitle, isMinimized, isVisible]);
 
+  // Dynamic resizing of standalone mascot window to prevent empty blocking space on desktop
+  useEffect(() => {
+    if (isStandalone && typeof window !== 'undefined' && (window as any).require) {
+      try {
+        const { ipcRenderer } = (window as any).require('electron');
+        let width = 160;
+        let height = 140;
+        
+        if (contextMenu) {
+          width = 250;
+          height = 270;
+        } else if (isMinimized) {
+          width = 110;
+          height = 110;
+        } else if (showBubble) {
+          width = 250;
+          height = 270;
+        } else {
+          width = 160;
+          height = 140;
+        }
+        
+        ipcRenderer.send('resize-mascot-window', { width, height });
+      } catch (err) {
+        console.error('Failed to send resize event:', err);
+      }
+    }
+  }, [isStandalone, showBubble, isMinimized, contextMenu]);
+
   // Auto show a tip or wave occasionally
   useEffect(() => {
     const interval = setInterval(() => {
@@ -262,50 +291,115 @@ export function DesktopRobot({
     return (
       <div 
         style={{ WebkitAppRegion: 'drag' } as any}
-        className="flex flex-col items-center justify-end w-full h-screen bg-transparent text-slate-800 pb-4 px-4 relative overflow-hidden select-none"
+        className="flex flex-col items-center justify-end w-full h-screen bg-transparent text-slate-800 pb-2.5 px-3 relative overflow-hidden select-none"
       >
         <div className="flex flex-col items-center cursor-default max-w-full pointer-events-auto">
+          {/* Context Menu inside Standalone */}
+          <AnimatePresence>
+            {contextMenu && (
+              <motion.div 
+                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                style={{ WebkitAppRegion: 'no-drag' } as any}
+                className="relative w-[210px] bg-slate-900/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-800 p-2 flex flex-col gap-1 text-white text-xs mb-2.5"
+                onContextMenu={(e) => e.preventDefault()}
+              >
+                <div className="text-[9px] font-bold text-slate-400 px-2 pb-1.5 border-b border-slate-800 mb-1 flex justify-between items-center">
+                  <span>ASİSTAN MENÜSÜ</span>
+                  <button onClick={() => setContextMenu(null)} className="hover:text-white transition-colors">
+                    <X size={10} />
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => {
+                    showNextTip();
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                >
+                  <HelpCircle size={11} className="text-amber-400" />
+                  <span>Mevzuat İpucu Ver</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setSoundEnabled(!soundEnabled);
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                >
+                  {soundEnabled ? <Volume2 size={11} className="text-blue-400" /> : <VolumeX size={11} className="text-slate-400" />}
+                  <span>Asistan Sesleri: {soundEnabled ? "Açık" : "Kapalı"}</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    setIsMinimized(!isMinimized);
+                    setContextMenu(null);
+                  }}
+                  className="w-full text-left px-2 py-1.5 hover:bg-slate-800 rounded-lg transition-colors flex items-center gap-2 text-[10px]"
+                >
+                  {isMinimized ? <Maximize2 size={11} className="text-emerald-400" /> : <Minimize2 size={11} className="text-rose-400" />}
+                  <span>{isMinimized ? "Asistanı Büyüt" : "Simge Durumuna Getir"}</span>
+                </button>
+
+                <button
+                  onClick={() => window.close()}
+                  className="w-full text-left px-2 py-1.5 hover:bg-red-950 hover:text-red-300 rounded-lg transition-colors flex items-center gap-2 text-[10px] text-red-400 mt-1"
+                >
+                  <X size={11} />
+                  <span>Kapat</span>
+                </button>
+
+                {/* Speech Bubble Tail for Menu */}
+                <div className="absolute -bottom-1 w-2.5 h-2.5 bg-slate-900 border-r border-b border-slate-800 rotate-45 left-1/2 -translate-x-1/2" />
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Speech Bubble */}
           <AnimatePresence>
-            {showBubble && !isMinimized && (
+            {showBubble && !isMinimized && !contextMenu && (
               <motion.div
                 initial={{ opacity: 0, y: 15, scale: 0.9 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: 10, scale: 0.95 }}
                 style={{ WebkitAppRegion: 'no-drag' } as any}
-                className="relative w-full max-w-[240px] bg-white rounded-2xl p-3.5 shadow-2xl border border-slate-200/80 flex flex-col gap-1.5 text-slate-800 text-xs mb-3"
+                className="relative w-[210px] bg-white rounded-2xl p-3 shadow-2xl border border-slate-200/80 flex flex-col gap-1.5 text-slate-800 text-xs mb-2.5"
               >
                 {/* Bubble Text */}
-                <p className="text-[11px] font-semibold leading-relaxed text-slate-700 whitespace-pre-line max-h-24 overflow-y-auto pr-1">
+                <p className="text-[10px] font-semibold leading-normal text-slate-700 whitespace-pre-line max-h-20 overflow-y-auto pr-1">
                   {bubbleText}
                 </p>
 
                 {/* Compact Actions inside speech bubble */}
-                <div className="flex justify-between items-center pt-2 border-t border-slate-100 mt-1">
-                  <div className="flex gap-1.5">
+                <div className="flex justify-between items-center pt-1.5 border-t border-slate-100 mt-0.5">
+                  <div className="flex gap-1">
                     <button
                       onClick={showNextTip}
-                      className="bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-lg py-0.5 px-2 text-[9px] font-bold transition-all border border-amber-100/50"
+                      className="bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-md py-0.5 px-1.5 text-[8px] font-extrabold transition-all border border-amber-100/50"
                     >
                       İpucu 💡
                     </button>
                     <button
                       onClick={() => setSoundEnabled(!soundEnabled)}
-                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-lg py-0.5 px-1.5 text-[9px] transition-all border border-slate-200/30"
+                      className="bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-md py-0.5 px-1 text-[8px] transition-all border border-slate-200/30 flex items-center justify-center"
                     >
-                      {soundEnabled ? <Volume2 size={11} /> : <VolumeX size={11} />}
+                      {soundEnabled ? <Volume2 size={10} /> : <VolumeX size={10} />}
                     </button>
                   </div>
                   <button 
                     onClick={() => setShowBubble(false)}
                     className="text-slate-400 hover:text-slate-600 transition-colors p-0.5"
                   >
-                    <X size={11} />
+                    <X size={10} />
                   </button>
                 </div>
 
                 {/* Speech Bubble Tail */}
-                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 bg-white border-r border-b border-slate-200/80 rotate-45" />
+                <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2.5 h-2.5 bg-white border-r border-b border-slate-200/80 rotate-45" />
               </motion.div>
             )}
           </AnimatePresence>
@@ -328,16 +422,16 @@ export function DesktopRobot({
               <motion.div 
                 initial={{ scale: 0 }}
                 animate={{ scale: 1 }}
-                className="bg-blue-600 hover:bg-blue-700 text-white p-3.5 rounded-full shadow-lg relative border border-blue-400"
+                className="bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-full shadow-lg relative border border-blue-400"
               >
-                <Sparkles size={18} className="animate-pulse" />
+                <Sparkles size={16} className="animate-pulse" />
               </motion.div>
             ) : (
-              <div className="relative p-2 bg-blue-500/5 rounded-full border border-blue-500/10 backdrop-blur-sm shadow-sm hover:scale-105 transition-transform duration-300">
+              <div className="relative p-1.5 bg-blue-500/5 rounded-full border border-blue-500/10 backdrop-blur-sm shadow-sm hover:scale-105 transition-transform duration-300">
                 <motion.div
                   animate={{ y: [0, -4, 0] }}
                   transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-16 h-16"
+                  className="w-14 h-14"
                 >
                   <svg viewBox="0 0 100 100" className="w-full h-full drop-shadow-md">
                     <circle cx="50" cy="50" r="42" fill="none" stroke="#60a5fa" strokeWidth="1.5" strokeDasharray="4 8" className="animate-spin" style={{ animationDuration: '20s' }} />
@@ -388,70 +482,18 @@ export function DesktopRobot({
             )}
           </div>
 
-          {/* Minimal Elegant Grab handle badge */}
-          <div 
-            style={{ WebkitAppRegion: 'drag' } as any}
-            className="mt-2.5 px-3 py-1 bg-blue-600/10 hover:bg-blue-600/20 text-[9px] text-blue-600 rounded-full font-extrabold tracking-wider uppercase cursor-grab active:cursor-grabbing border border-blue-600/20 transition-all select-none flex items-center gap-1 shadow-sm"
-            title="Sürükleyip taşımak için basılı tutun"
-          >
-            <span>✥</span>
-            <span>SÜRÜKLE</span>
-          </div>
-        </div>
-
-        {/* Context Menu inside Standalone */}
-        <AnimatePresence>
-          {contextMenu && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              style={{ top: contextMenu.y, left: contextMenu.x, WebkitAppRegion: 'no-drag' } as any}
-              className="fixed z-50 bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-slate-100 py-1.5 w-44 text-slate-800 text-[11px] font-medium pointer-events-auto"
-              onContextMenu={(e) => e.preventDefault()}
+          {/* Minimal Elegant Grab handle badge (only shown when not minimized) */}
+          {!isMinimized && (
+            <div 
+              style={{ WebkitAppRegion: 'drag' } as any}
+              className="mt-1.5 px-2.5 py-0.5 bg-blue-600/10 hover:bg-blue-600/20 text-[8px] text-blue-600 rounded-full font-black tracking-wider uppercase cursor-grab active:cursor-grabbing border border-blue-600/20 transition-all select-none flex items-center gap-1 shadow-sm"
+              title="Sürükleyip taşımak için basılı tutun"
             >
-              <button
-                onClick={() => {
-                  showNextTip();
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-blue-600 transition-colors flex items-center gap-2"
-              >
-                <HelpCircle size={12} className="text-amber-500" />
-                <span>Mevzuat İpucu Ver</span>
-              </button>
-              <button
-                onClick={() => {
-                  setSoundEnabled(!soundEnabled);
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-blue-600 transition-colors flex items-center justify-between"
-              >
-                <div className="flex items-center gap-2">
-                  {soundEnabled ? <Volume2 size={12} className="text-blue-500" /> : <VolumeX size={12} className="text-slate-400" />}
-                  <span>Asistan Sesleri</span>
-                </div>
-              </button>
-              <button
-                onClick={() => {
-                  setIsMinimized(!isMinimized);
-                  setContextMenu(null);
-                }}
-                className="w-full text-left px-3 py-2 hover:bg-slate-50 text-slate-700 hover:text-blue-600 transition-colors flex items-center gap-2"
-              >
-                {isMinimized ? <Maximize2 size={12} /> : <Minimize2 size={12} />}
-                <span>{isMinimized ? "Asistanı Büyüt" : "Simge Durumuna Getir"}</span>
-              </button>
-              <button
-                onClick={() => window.close()}
-                className="w-full text-left px-3 py-2 hover:bg-red-50 text-red-600 transition-colors flex items-center gap-2"
-              >
-                <X size={12} />
-                <span>Kapat</span>
-              </button>
-            </motion.div>
+              <span>✥</span>
+              <span>SÜRÜKLE</span>
+            </div>
           )}
-        </AnimatePresence>
+        </div>
       </div>
     );
   }
